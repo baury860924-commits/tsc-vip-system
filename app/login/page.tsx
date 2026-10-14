@@ -33,7 +33,7 @@ export default function LoginPage(){
    <div style={{display:"flex",border:"1px solid #aaa",borderRadius:8,overflow:"hidden"}}>
     <input id="password" type={showPassword?"text":"password"} autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="請輸入密碼" style={{flex:1,minWidth:0,padding:12,border:0}}/>
     <button type="button" aria-label={showPassword?"隱藏密碼":"顯示密碼"} aria-pressed={showPassword} title={showPassword?"隱藏密碼":"顯示密碼"} onClick={()=>setShowPassword(v=>!v)} style={{padding:"0 14px",border:0,background:"transparent",cursor:"pointer",fontSize:20}}>
-     {showPassword?"◉":"◉"}
+     <span aria-hidden="true">👁</span>
      <span style={{fontSize:12,marginLeft:5}}>{showPassword?"隱藏":"顯示"}</span>
     </button>
    </div>
