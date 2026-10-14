@@ -38,7 +38,8 @@ const dueLeads=leads.filter(m=>m.next_followup&&m.next_followup<=today).sort((a,
 const unscheduledLeads=leads.filter(m=>!m.next_followup);
 function followupEdit(m:Member){edit(m);setMemberFilter("非會員");setNotice("正在編輯「"+m.name+"」的追蹤資料");}
 return <main className="app-shell">
-<header className="app-header"><div><span className="pill">TSC VIP · PRD 重建測試版 v0.6</span><h1>VIP 智慧會員管理系統</h1><p className="muted">會員經營、專屬銷售漏斗與諮詢陪跑</p></div><div className="role-switch"><button className={role==="admin"?"active":""} onClick={()=>{setRole("admin");setNotice("");}}>TSC 管理後台</button><button className={role==="vip"?"active":""} onClick={()=>{setRole("vip");setNotice("");}}>VIP 會員前台</button></div></header>
+<header className="app-header"><div><span className="pill">TSC VIP · 測試版 v0.6.1</span><h1>VIP 智慧會員管理系統</h1><p className="muted">現階段專注 VIP 會員經營、專屬銷售漏斗與諮詢陪跑</p></div><div className="role-switch"><button className={role==="admin"?"active":""} onClick={()=>{setRole("admin");setNotice("");}}>TSC 管理後台</button><button className={role==="vip"?"active":""} onClick={()=>{setRole("vip");setNotice("");}}>VIP 會員前台</button></div></header>
+<section className="card"><h2>系統模組規劃</h2><div className="action-grid"><div className="stat"><span>目前開發</span><strong>VIP 系統</strong><p className="muted">會員管理、專屬漏斗、諮詢與陪跑</p></div><div className="stat"><span>預留 · 尚未開發</span><strong>生態圈部</strong><p className="muted">保留未來模組入口，目前無功能與資料連動</p></div><div className="stat"><span>預留 · 尚未開發</span><strong>TSC 會員</strong><p className="muted">保留未來模組入口，目前無功能與資料連動</p></div></div></section>
 <section className="demo-banner"><strong>展示測試模式（免登入）</strong><span>全部為假資料，儲存於此瀏覽器。切換角色僅供測試，沒有真正權限隔離。請勿輸入真實會員個資。</span></section>
 {notice&&<div className="notice" role="status">{notice}<button className="text-button" onClick={()=>setNotice("")}>關閉</button></div>}
 {role==="admin"?<>
