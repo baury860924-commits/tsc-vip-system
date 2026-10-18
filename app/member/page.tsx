@@ -18,7 +18,6 @@ export default function MemberHome(){
  const [directory,setDirectory]=useState<Listing[]>([]);
  const [directoryStages,setDirectoryStages]=useState<(Stage&{member_id:string})[]>([]);
  const [directoryError,setDirectoryError]=useState("");
- const [expanded,setExpanded]=useState<string|null>(null);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
  useEffect(()=>{
@@ -82,12 +81,21 @@ export default function MemberHome(){
    <section id="directory" style={{marginTop:24}}><h2>探索 VIP 會員</h2><p>僅顯示已取得本人同意公開的會員名片與銷售漏斗。</p>
     {directoryError&&<p role="status">{directoryError}</p>}
     {!directoryError&&directory.length===0&&<p>目前尚無公開的 VIP 名片。</p>}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>{directory.map(d=><article key={d.member_id} style={{padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
-      <h3>{d.display_name}</h3><p>{d.company||"未填公司"}｜{d.industry||"未填產業"}</p>
-      <button type="button" onClick={()=>setExpanded(old=>old===d.member_id?null:d.member_id)} style={{padding:"8px 12px"}}>{expanded===d.member_id?"收合名片":"查看公開名片與漏斗"}</button>
-      {expanded===d.member_id&&<div><p style={{whiteSpace:"pre-wrap"}}>{d.introduction||"尚未填寫公開介紹"}</p>
-       {directoryStages.filter(x=>x.member_id===d.member_id).map(x=><div key={x.stage_number} style={{borderTop:"1px solid #e2e8f0",paddingTop:10,marginTop:10}}><strong>第 {x.stage_number} 階段｜{x.title}</strong><p style={{whiteSpace:"pre-wrap"}}>{x.description}</p>{x.goal&&<p>目標：{x.goal}</p>}{x.action_plan&&<p>行動：{x.action_plan}</p>}</div>)}
-      </div>}
+    <div style={{display:"grid",gap:20}}>{directory.map(d=><article key={d.member_id} style={{padding:20,border:"1px solid #cbd5e1",borderRadius:14}}>
+      <header style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",alignItems:"start"}}>
+       <div><h3 style={{margin:"0 0 8px"}}>{d.display_name}</h3><p style={{margin:"0 0 8px"}}>{d.company||"未填公司"}｜{d.industry||"未填產業"}</p></div>
+       <span style={{fontSize:13,color:"#475569"}}>公開 VIP 名片</span>
+      </header>
+      {d.introduction&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{d.introduction}</p>}
+      <h4 style={{marginBottom:12}}>三階段銷售漏斗</h4>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(220px,1fr))",gap:12,overflowX:"auto"}}>
+       {[1,2,3].map(n=>{const x=directoryStages.find(y=>y.member_id===d.member_id&&y.stage_number===n);return <div key={n} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:14,minWidth:0,overflowWrap:"anywhere",background:"#f8fafc"}}>
+        <strong>第 {n} 階段｜{x?.title||["陌生接觸","入門體驗","主要產品"][n-1]}</strong>
+        <p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{x?.description||"尚未設定"}</p>
+        {x?.goal&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>目標：{x.goal}</p>}
+        {x?.action_plan&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>行動：{x.action_plan}</p>}
+       </div>;})}
+      </div>
     </article>)}</div>
    </section>
    <section id="announcements" style={{marginTop:24}}><h2>公告</h2><p>公告功能尚未開放。</p></section>
