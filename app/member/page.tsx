@@ -62,7 +62,7 @@ export default function MemberHome(){
   setSending(false);
  }
  const fieldStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
- return <main style={{maxWidth:960,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}>
+ return <main style={{maxWidth:1440,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}>
   <a href="/account">← 帳號中心</a><h1>TSC VIP 會員專區</h1>
   {loading?<p>正在確認會員身分…</p>:member?<><h2>歡迎，{member.name}</h2>
    <p>{member.vip_number||"VIP"}｜{member.company}｜{member.industry}</p>
@@ -84,15 +84,15 @@ export default function MemberHome(){
     <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}><label style={{flex:"2 1 260px"}}>搜尋姓名、公司、產業<input style={fieldStyle} value={directoryQuery} onChange={e=>setDirectoryQuery(e.target.value)} placeholder="輸入關鍵字"/></label><label style={{flex:"1 1 180px"}}>產業篩選<select style={fieldStyle} value={industryFilter} onChange={e=>setIndustryFilter(e.target.value)}><option>全部產業</option>{[...new Set(directory.map(d=>d.industry).filter(Boolean))].sort().map(v=><option key={v}>{v}</option>)}</select></label></div>
     {directoryError&&<p role="status">{directoryError}</p>}
     {!directoryError&&directory.length===0&&<p>目前尚無公開的 VIP 名片。</p>}
-    <div style={{display:"grid",gap:20}}>{directory.filter(d=>(industryFilter==="全部產業"||d.industry===industryFilter)&&[d.display_name,d.company,d.industry,d.introduction].join(" ").toLocaleLowerCase().includes(directoryQuery.trim().toLocaleLowerCase())).map(d=><article key={d.member_id} style={{padding:20,border:"1px solid #cbd5e1",borderRadius:14}}>
+    <div style={{display:"grid",gap:20}}>{directory.filter(d=>(industryFilter==="全部產業"||d.industry===industryFilter)&&[d.display_name,d.company,d.industry,d.introduction].join(" ").toLocaleLowerCase().includes(directoryQuery.trim().toLocaleLowerCase())).map(d=><article key={d.member_id} style={{padding:28,border:"1px solid #cbd5e1",borderRadius:14}}>
       <header style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",alignItems:"start"}}>
        <div><h3 style={{margin:"0 0 8px"}}>{d.display_name}</h3><p style={{margin:"0 0 8px"}}>{d.company||"未填公司"}｜{d.industry||"未填產業"}</p></div>
        <span style={{fontSize:13,color:"#475569"}}>公開 VIP 名片</span>
       </header>
       {d.introduction&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{d.introduction}</p>}
       <h4 style={{marginBottom:12}}>三階段銷售漏斗</h4>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,230px),1fr))",gap:12}}>
-       {[1,2,3].map(n=>{const x=directoryStages.find(y=>y.member_id===d.member_id&&y.stage_number===n);return <div key={n} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:14,minWidth:0,overflowWrap:"anywhere",background:"#f8fafc"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,320px),1fr))",gap:18}}>
+       {[1,2,3].map(n=>{const x=directoryStages.find(y=>y.member_id===d.member_id&&y.stage_number===n);return <div key={n} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:22,minWidth:0,overflowWrap:"anywhere",background:"#f8fafc"}}>
         <strong>第 {n} 階段｜{x?.title||["陌生接觸","入門體驗","主要產品"][n-1]}</strong>
         <p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{x?.description||"尚未設定"}</p>
         {x?.goal&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>目標：{x.goal}</p>}
