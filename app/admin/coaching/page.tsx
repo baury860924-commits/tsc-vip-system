@@ -60,7 +60,7 @@ export default function CoachingPage(){
  }
  const inputStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
  return <main style={{maxWidth:900,margin:"32px auto",padding:20,fontFamily:"system-ui,sans-serif"}}>
-  <a href="/admin/members">← 返回會員管理</a><h1>VIP 陪跑管理｜內部後台</h1>
+  <a href="/admin/members">← 返回會員管理</a>　<a href="/admin/assignments">工作人員分派 →</a><h1>VIP 陪跑管理｜內部後台</h1>
   <p style={{background:"#fff4d6",padding:14,borderRadius:8}}>訪談摘要及追蹤內容僅供管理員與工作人員查看，不會出現在 VIP 會員前台。請勿記錄不必要的敏感個資。</p>
   {loading?<p>正在驗證權限…</p>:authorized?<>
    <section style={{border:"1px solid #cbd5e1",padding:18,borderRadius:12,marginBottom:22}}><h2>本月主動邀約追蹤</h2>
