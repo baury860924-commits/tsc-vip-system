@@ -35,7 +35,8 @@ export default function AccountPage(){
    <p>資料庫角色：<strong>{role==="admin"?"管理員":role==="staff"?"工作人員":role==="vip"?"VIP 會員":"尚未分派"}</strong></p>
    {roleError&&<p role="alert">{roleError}</p>}
    <p style={{background:"#fff4d6",padding:16,borderRadius:8}}>此角色由 Supabase 資料庫查詢取得，並非依電子郵件名稱直接授權。正式管理頁面與雲端資料整合仍在開發，展示版沒有真實權限隔離。</p>
-   <p>目前僅能前往公開展示版測試功能；展示版資料存放在瀏覽器，請勿輸入真實會員個資。</p>
+   <p>正式會員專區已開放初步測試；未綁定會員帳號時不會顯示會員資料。公開展示版仍使用瀏覽器測試資料，請勿輸入真實個資。</p>
+   <p><a href="/member">進入 VIP 會員前台 →</a></p>
    {(role==="admin"||role==="staff")&&<p><a href="/admin/members">進入正式雲端 VIP 會員管理 →</a></p>}
    <p><a href="/">前往展示版（非正式後台）</a></p>
    <button onClick={signOut} style={{padding:"10px 16px"}}>安全登出</button>
