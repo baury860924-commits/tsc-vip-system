@@ -8,6 +8,8 @@ export default function CoachingPage(){
  const [members,setMembers]=useState<Member[]>([]);
  const [selected,setSelected]=useState("");
  const [records,setRecords]=useState<RecordRow[]>([]);
+ const [monthlyRecords,setMonthlyRecords]=useState<Pick<RecordRow,"member_id"|"contact_date"|"invitation_sent"|"member_replied">[]>([]);
+ const [monthError,setMonthError]=useState("");
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState("");
@@ -31,6 +33,9 @@ export default function CoachingPage(){
     if(roleError||!["admin","staff"].includes(profile?.role||"")){if(active)setNotice("僅限管理員與工作人員使用。");return;}
     const {data,error}=await sb.from("vip_members").select("id,name,vip_number,company").order("vip_number",{ascending:true}).limit(200);
     if(active){setAuthorized(true);if(error)setNotice("無法讀取會員名單："+(error.code||"權限錯誤"));else setMembers(data||[]);}
+    const now=new Date();const first=new Date(now.getFullYear(),now.getMonth(),1).toLocaleDateString("en-CA");const next=new Date(now.getFullYear(),now.getMonth()+1,1).toLocaleDateString("en-CA");
+    const {data:monthly,error:monthlyError}=await sb.from("vip_coaching_records").select("member_id,contact_date,invitation_sent,member_replied").gte("contact_date",first).lt("contact_date",next).limit(5000);
+    if(active){if(monthlyError)setMonthError("本月追蹤統計尚無法讀取，請確認陪跑資料表已建立。");else setMonthlyRecords(monthly||[]);}
    }catch{if(active)setNotice("連線失敗。");}
    finally{if(active)setLoading(false);}
   }
@@ -50,14 +55,20 @@ export default function CoachingPage(){
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
   if(error)setNotice("儲存失敗："+(error.code==="42P01"?"資料表尚未建立":error.code||"權限錯誤"));
-  else if(data){setRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
+  else if(data){setRecords(old=>[data,...old]);const now=new Date();const month=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
   setBusy(false);
  }
  const inputStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
  return <main style={{maxWidth:900,margin:"32px auto",padding:20,fontFamily:"system-ui,sans-serif"}}>
   <a href="/admin/members">← 返回會員管理</a><h1>VIP 陪跑管理｜內部後台</h1>
   <p style={{background:"#fff4d6",padding:14,borderRadius:8}}>訪談摘要及追蹤內容僅供管理員與工作人員查看，不會出現在 VIP 會員前台。請勿記錄不必要的敏感個資。</p>
-  {loading?<p>正在驗證權限…</p>:authorized?<><label>選擇 VIP 會員<select style={inputStyle} value={selected} onChange={e=>void chooseMember(e.target.value)}><option value="">請選擇會員</option>{members.map(m=><option key={m.id} value={m.id}>{m.vip_number||"未編號"}｜{m.name}{m.company?"｜"+m.company:""}</option>)}</select></label>
+  {loading?<p>正在驗證權限…</p>:authorized?<>
+   <section style={{border:"1px solid #cbd5e1",padding:18,borderRadius:12,marginBottom:22}}><h2>本月主動邀約追蹤</h2>
+    <p>會員總數：{members.length}｜已發邀約：{members.filter(m=>monthlyRecords.some(r=>r.member_id===m.id&&r.invitation_sent)).length}｜尚未邀約：{members.filter(m=>!monthlyRecords.some(r=>r.member_id===m.id&&r.invitation_sent)).length}｜已回覆：{members.filter(m=>monthlyRecords.some(r=>r.member_id===m.id&&r.member_replied)).length}</p>
+    {monthError?<p role="alert">{monthError}</p>:<div style={{display:"flex",flexWrap:"wrap",gap:8}}>{members.filter(m=>!monthlyRecords.some(r=>r.member_id===m.id&&r.invitation_sent)).map(m=><button key={m.id} type="button" onClick={()=>void chooseMember(m.id)} style={{padding:"7px 10px",border:"1px solid #cbd5e1",borderRadius:8,background:"#fff"}}>{m.vip_number||"未編號"}｜{m.name}（未邀約）</button>)}</div>}
+    <p style={{fontSize:13,color:"#475569"}}>統計以聯繫日期所屬月份計算，已發出邀約即完成本月義務，會員回覆另外計算。</p>
+   </section>
+   <label>選擇 VIP 會員<select style={inputStyle} value={selected} onChange={e=>void chooseMember(e.target.value)}><option value="">請選擇會員</option>{members.map(m=><option key={m.id} value={m.id}>{m.vip_number||"未編號"}｜{m.name}{m.company?"｜"+m.company:""}</option>)}</select></label>
    {selected&&<><section style={{border:"1px solid #ddd",padding:20,borderRadius:12,marginTop:20}}><h2>新增陪跑紀錄</h2>
     <form onSubmit={save} style={{display:"grid",gap:14}}>
      <label>聯繫日期<input required type="date" value={date} onChange={e=>setDate(e.target.value)} style={inputStyle}/></label>
