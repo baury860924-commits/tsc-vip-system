@@ -18,6 +18,7 @@ export default function AdminMembersPage(){
  const [end,setEnd]=useState("");
  const [selected,setSelected]=useState<VipMember|null>(null);
  const [stages,setStages]=useState<{stage_number:number;title:string;description:string;goal:string;action_plan:string}[]>([]);
+ const [bindingBusy,setBindingBusy]=useState(false);
  const [funnelBusy,setFunnelBusy]=useState(false);
  const [funnelMessage,setFunnelMessage]=useState("");
  const stageLabels=["陌生接觸","入門體驗","主要產品"];
@@ -59,6 +60,18 @@ export default function AdminMembersPage(){
   }
   void init();return()=>{alive=false;};
  },[]);
+ async function bindDemoVip(member:VipMember){
+  if(!sb||role!=="admin"||member.name!=="陳柏儒"||member.user_id)return;
+  const {data:{user},error:authError}=await sb.auth.getUser();
+  if(authError||!user){setMessage("請先重新登入管理員帳號。");return;}
+  if(members.some(m=>m.user_id===user.id)){setMessage("此帳號已綁定其他 VIP，請先確認。");return;}
+  if(!window.confirm("確定將目前管理員帳號綁定為陳柏儒示範 VIP？管理員角色會保留。"))return;
+  setBindingBusy(true);setMessage("");
+  const {data,error}=await sb.from("vip_members").update({user_id:user.id}).eq("id",member.id).is("user_id",null).select("id,user_id").maybeSingle();
+  if(error||!data)setMessage("綁定未完成："+(error?.message||"會員已綁定或資料有變動，請重新整理。"));
+  else{setMembers(old=>old.map(m=>m.id===member.id?{...m,user_id:user.id}:m));setMessage("陳柏儒示範 VIP 已綁定。可開啟會員前台測試。");}
+  setBindingBusy(false);
+ }
  async function addMember(e:React.FormEvent){
   e.preventDefault();
   if(!sb||role!=="admin"&&role!=="staff")return;
@@ -89,7 +102,7 @@ export default function AdminMembersPage(){
    </section>
    <p><a href="/admin/coaching">前往 VIP 陪跑管理 →</a>　<a href="/admin/consultations">前往 VIP 諮詢管理 →</a></p>
    <h2>雲端會員名單（{members.length} 筆）</h2>
-   {members.length===0?<p>尚未建立正式會員資料。原展示版測試資料不會自動匯入。</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["VIP 編號","姓名","公司","產業","合約起日","合約到期","登入綁定","銷售漏斗"].map(h=><th key={h} style={{padding:10,borderBottom:"2px solid #ddd"}}>{h}</th>)}</tr></thead><tbody>{members.map(m=><tr key={m.id}>{[m.vip_number||"未設定",m.name,m.company,m.industry,m.contract_start||"—",m.contract_end||"—",m.user_id?"已綁定":"尚未綁定"].map((v,i)=><td key={i} style={{padding:10,borderBottom:"1px solid #eee"}}>{v}</td>)}<td style={{padding:10,borderBottom:"1px solid #eee"}}><button type="button" onClick={()=>void openFunnel(m)}>編輯漏斗</button></td></tr>)}</tbody></table></div>}
+   {members.length===0?<p>尚未建立正式會員資料。原展示版測試資料不會自動匯入。</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["VIP 編號","姓名","公司","產業","合約起日","合約到期","登入綁定","示範 VIP","銷售漏斗"].map(h=><th key={h} style={{padding:10,borderBottom:"2px solid #ddd"}}>{h}</th>)}</tr></thead><tbody>{members.map(m=><tr key={m.id}>{[m.vip_number||"未設定",m.name,m.company,m.industry,m.contract_start||"—",m.contract_end||"—",m.user_id?"已綁定":"尚未綁定"].map((v,i)=><td key={i} style={{padding:10,borderBottom:"1px solid #eee"}}>{v}</td>)}<td style={{padding:10,borderBottom:"1px solid #eee"}}>{role==="admin"&&m.name==="陳柏儒"&&!m.user_id?<button type="button" disabled={bindingBusy} onClick={()=>void bindDemoVip(m)}>{bindingBusy?"處理中…":"綁定目前帳號"}</button>:m.name==="陳柏儒"&&m.user_id?"已綁定":"—"}</td><td style={{padding:10,borderBottom:"1px solid #eee"}}><button type="button" onClick={()=>void openFunnel(m)}>編輯漏斗</button></td></tr>)}</tbody></table></div>}
    {selected&&<section style={{border:"1px solid #cbd5e1",borderRadius:12,padding:20,marginTop:24}}>
     <h2>{selected.name}｜專屬三階段銷售漏斗</h2>
     <p>每位會員有獨立內容。管理員可編輯，VIP 本人僅可依資料庫權限查看。</p>
