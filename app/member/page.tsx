@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 type Member={id:string;name:string;vip_number:string|null;company:string;industry:string;contract_start:string|null;contract_end:string|null};
 type Stage={stage_number:number;title:string;description:string;goal:string;action_plan:string};
+type Listing={member_id:string;display_name:string;company:string;industry:string;introduction:string};
 export default function MemberHome(){
  const [member,setMember]=useState<Member|null>(null);
  const [sb,setSb]=useState<SupabaseClient|null>(null);
@@ -14,6 +15,10 @@ export default function MemberHome(){
  const [sending,setSending]=useState(false);
  const [consultNotice,setConsultNotice]=useState("");
  const [stages,setStages]=useState<Stage[]>([]);
+ const [directory,setDirectory]=useState<Listing[]>([]);
+ const [directoryStages,setDirectoryStages]=useState<(Stage&{member_id:string})[]>([]);
+ const [directoryError,setDirectoryError]=useState("");
+ const [expanded,setExpanded]=useState<string|null>(null);
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
  useEffect(()=>{
@@ -30,6 +35,13 @@ export default function MemberHome(){
     if(active)setMember(m);
     const {data:rows,error:funnelError}=await sb.from("vip_funnel_stages").select("stage_number,title,description,goal,action_plan").eq("member_id",m.id).order("stage_number");
     if(active){if(funnelError)setNotice("銷售漏斗尚未完成設定。");else setStages(rows||[]);}
+    const d=await sb.from("vip_directory").select("member_id,display_name,company,industry,introduction").eq("is_published",true).eq("consent_confirmed",true).order("display_name");
+    if(active){if(d.error)setDirectoryError("公開名錄尚未啟用，請先執行資料庫設定。");else setDirectory(d.data||[]);}
+    if(!d.error&&d.data?.length){
+     const ids=d.data.map(x=>x.member_id);
+     const f=await sb.from("vip_funnel_stages").select("member_id,stage_number,title,description,goal,action_plan").in("member_id",ids).order("stage_number");
+     if(active&&f.data)setDirectoryStages(f.data);
+    }
    }catch{if(active)setNotice("讀取資料失敗");}
    finally{if(active)setLoading(false);}
   }
@@ -67,7 +79,17 @@ export default function MemberHome(){
      {consultNotice&&<p role="status">{consultNotice}</p>}
     </form>
    </section>
-   <section id="directory" style={{marginTop:24}}><h2>探索 VIP 會員</h2><p>會員公開名錄尚未開放，未經本人同意不公開個人資料。</p></section>
+   <section id="directory" style={{marginTop:24}}><h2>探索 VIP 會員</h2><p>僅顯示已取得本人同意公開的會員名片與銷售漏斗。</p>
+    {directoryError&&<p role="status">{directoryError}</p>}
+    {!directoryError&&directory.length===0&&<p>目前尚無公開的 VIP 名片。</p>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>{directory.map(d=><article key={d.member_id} style={{padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
+      <h3>{d.display_name}</h3><p>{d.company||"未填公司"}｜{d.industry||"未填產業"}</p>
+      <button type="button" onClick={()=>setExpanded(old=>old===d.member_id?null:d.member_id)} style={{padding:"8px 12px"}}>{expanded===d.member_id?"收合名片":"查看公開名片與漏斗"}</button>
+      {expanded===d.member_id&&<div><p style={{whiteSpace:"pre-wrap"}}>{d.introduction||"尚未填寫公開介紹"}</p>
+       {directoryStages.filter(x=>x.member_id===d.member_id).map(x=><div key={x.stage_number} style={{borderTop:"1px solid #e2e8f0",paddingTop:10,marginTop:10}}><strong>第 {x.stage_number} 階段｜{x.title}</strong><p style={{whiteSpace:"pre-wrap"}}>{x.description}</p>{x.goal&&<p>目標：{x.goal}</p>}{x.action_plan&&<p>行動：{x.action_plan}</p>}</div>)}
+      </div>}
+    </article>)}</div>
+   </section>
    <section id="announcements" style={{marginTop:24}}><h2>公告</h2><p>公告功能尚未開放。</p></section>
   </>:<p role="status">{notice}</p>}
   {member&&notice&&<p role="status">{notice}</p>}
