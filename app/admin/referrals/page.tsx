@@ -25,11 +25,11 @@ export default function ReferralsAdmin(){
  const nameOf=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function create(e:React.FormEvent){e.preventDefault();if(!sb||!ready||!referrer||!date||(channel==="VIP 互相轉介紹"&&(!recipient||referrer===recipient)))return;
  setBusy(true);setNotice("");
- const {data,error}=await sb.from("vip_referrals").insert({referrer_member_id:referrer,recipient_member_id:channel==="VIP 互相轉介紹"?recipient:null,referral_type:channel,referral_date:date,lead_label:lead.trim(),summary:summary.trim()}).select("id,referrer_member_id,recipient_member_id,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
+ const {data,error}=await sb.from("vip_referrals").insert({referrer_member_id:referrer,recipient_member_id:channel==="VIP 互相轉介紹"?recipient:null,referral_type:channel,referral_date:date,lead_label:lead.trim(),summary:summary.trim()}).select("id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("新增失敗："+error.message);else if(data){setItems(old=>[data,...old]);setLead("");setSummary("");setNotice("已建立轉介紹紀錄");}setBusy(false);}
  function begin(r:Referral){setEditing(r.id);setStatus(r.status);setFollow(r.follow_up_date||"");setNote(r.internal_note||"");}
  async function update(id:string){if(!sb||!ready)return;setBusy(true);setNotice("");
- const {data,error}=await sb.from("vip_referrals").update({status,follow_up_date:follow||null,internal_note:note,updated_at:new Date().toISOString()}).eq("id",id).select("id,referrer_member_id,recipient_member_id,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
+ const {data,error}=await sb.from("vip_referrals").update({status,follow_up_date:follow||null,internal_note:note,updated_at:new Date().toISOString()}).eq("id",id).select("id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setItems(old=>old.map(x=>x.id===id?data:x));setEditing(null);setNotice("已更新轉介紹進度");}setBusy(false);}
  const scoped=items.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
  const visible=scoped.filter(x=>(filter==="全部"||x.status===filter)&&(channelFilter==="全部類型"||x.referral_type===channelFilter));
