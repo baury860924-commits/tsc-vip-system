@@ -18,6 +18,8 @@ export default function MemberHome(){
  const [directory,setDirectory]=useState<Listing[]>([]);
  const [directoryStages,setDirectoryStages]=useState<(Stage&{member_id:string})[]>([]);
  const [directoryError,setDirectoryError]=useState("");
+ const [directoryQuery,setDirectoryQuery]=useState("");
+ const [industryFilter,setIndustryFilter]=useState("全部產業");
  const [loading,setLoading]=useState(true);
  const [notice,setNotice]=useState("");
  useEffect(()=>{
@@ -79,16 +81,17 @@ export default function MemberHome(){
     </form>
    </section>
    <section id="directory" style={{marginTop:24}}><h2>探索 VIP 會員</h2><p>僅顯示已取得本人同意公開的會員名片與銷售漏斗。</p>
+    <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}><label style={{flex:"2 1 260px"}}>搜尋姓名、公司、產業<input style={fieldStyle} value={directoryQuery} onChange={e=>setDirectoryQuery(e.target.value)} placeholder="輸入關鍵字"/></label><label style={{flex:"1 1 180px"}}>產業篩選<select style={fieldStyle} value={industryFilter} onChange={e=>setIndustryFilter(e.target.value)}><option>全部產業</option>{[...new Set(directory.map(d=>d.industry).filter(Boolean))].sort().map(v=><option key={v}>{v}</option>)}</select></label></div>
     {directoryError&&<p role="status">{directoryError}</p>}
     {!directoryError&&directory.length===0&&<p>目前尚無公開的 VIP 名片。</p>}
-    <div style={{display:"grid",gap:20}}>{directory.map(d=><article key={d.member_id} style={{padding:20,border:"1px solid #cbd5e1",borderRadius:14}}>
+    <div style={{display:"grid",gap:20}}>{directory.filter(d=>(industryFilter==="全部產業"||d.industry===industryFilter)&&[d.display_name,d.company,d.industry,d.introduction].join(" ").toLocaleLowerCase().includes(directoryQuery.trim().toLocaleLowerCase())).map(d=><article key={d.member_id} style={{padding:20,border:"1px solid #cbd5e1",borderRadius:14}}>
       <header style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap",alignItems:"start"}}>
        <div><h3 style={{margin:"0 0 8px"}}>{d.display_name}</h3><p style={{margin:"0 0 8px"}}>{d.company||"未填公司"}｜{d.industry||"未填產業"}</p></div>
        <span style={{fontSize:13,color:"#475569"}}>公開 VIP 名片</span>
       </header>
       {d.introduction&&<p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{d.introduction}</p>}
       <h4 style={{marginBottom:12}}>三階段銷售漏斗</h4>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(220px,1fr))",gap:12,overflowX:"auto"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,230px),1fr))",gap:12}}>
        {[1,2,3].map(n=>{const x=directoryStages.find(y=>y.member_id===d.member_id&&y.stage_number===n);return <div key={n} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:14,minWidth:0,overflowWrap:"anywhere",background:"#f8fafc"}}>
         <strong>第 {n} 階段｜{x?.title||["陌生接觸","入門體驗","主要產品"][n-1]}</strong>
         <p style={{whiteSpace:"pre-wrap",lineHeight:1.7}}>{x?.description||"尚未設定"}</p>
