@@ -73,8 +73,8 @@ export default function CoachingPage(){
     <form onSubmit={save} style={{display:"grid",gap:14}}>
      <label>聯繫日期<input required type="date" value={date} onChange={e=>setDate(e.target.value)} style={inputStyle}/></label>
      <label>聯繫方式<select style={inputStyle} value={method} onChange={e=>setMethod(e.target.value)}>{["LINE","電話","視訊","實體","其他"].map(x=><option key={x}>{x}</option>)}</select></label>
-     <label><input type="checkbox" checked={invited} onChange={e=>setInvited(e.target.checked)}/> 已發出本月主動邀約</label>
-     <label><input type="checkbox" checked={replied} onChange={e=>setReplied(e.target.checked)}/> 會員已回覆</label>
+     <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",width:"fit-content"}}><input type="checkbox" style={{width:18,height:18,margin:0,flexShrink:0}} checked={invited} onChange={e=>setInvited(e.target.checked)}/><span>已發出本月主動邀約</span></label>
+     <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",width:"fit-content"}}><input type="checkbox" style={{width:18,height:18,margin:0,flexShrink:0}} checked={replied} onChange={e=>setReplied(e.target.checked)}/><span>會員已回覆</span></label>
      <label>訪談／聯繫摘要<textarea style={inputStyle} rows={4} value={summary} onChange={e=>setSummary(e.target.value)}/></label>
      <label>後續待辦<textarea style={inputStyle} rows={2} value={nextAction} onChange={e=>setNextAction(e.target.value)}/></label>
      <label>下次追蹤日期<input type="date" style={inputStyle} value={followDate} onChange={e=>setFollowDate(e.target.value)}/></label>
