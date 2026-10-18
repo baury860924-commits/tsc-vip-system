@@ -17,19 +17,19 @@ export default function AdminMembersPage(){
  const [start,setStart]=useState("");
  const [end,setEnd]=useState("");
  const [selected,setSelected]=useState<VipMember|null>(null);
- const [stages,setStages]=useState<{stage_number:number;title:string;description:string;goal:string;action_plan:string}[]>([]);
+ const [stages,setStages]=useState<{stage_number:number;title:string;description:string;goal:string;action_plan:string;price_details:string}[]>([]);
  const [funnelBusy,setFunnelBusy]=useState(false);
  const [funnelMessage,setFunnelMessage]=useState("");
  const stageLabels=["陌生接觸","入門體驗","主要產品"];
  async function openFunnel(member:VipMember){
   if(!sb)return;
   setSelected(member);setFunnelBusy(true);setFunnelMessage("");
-  const {data,error}=await sb.from("vip_funnel_stages").select("stage_number,title,description,goal,action_plan").eq("member_id",member.id);
+  const {data,error}=await sb.from("vip_funnel_stages").select("stage_number,title,description,goal,action_plan,price_details").eq("member_id",member.id);
   if(error){setFunnelMessage(error.code==="42P01"?"銷售漏斗資料表尚未建立，請先執行第二階段 SQL。":"讀取漏斗失敗："+(error.code||"請檢查權限"));setStages([]);}
-  else setStages([1,2,3].map(n=>{const found=data?.find(x=>x.stage_number===n);return {stage_number:n,title:found?.title||stageLabels[n-1],description:found?.description||"",goal:found?.goal||"",action_plan:found?.action_plan||""};}));
+  else setStages([1,2,3].map(n=>{const found=data?.find(x=>x.stage_number===n);return {stage_number:n,title:found?.title||stageLabels[n-1],description:found?.description||"",goal:found?.goal||"",action_plan:found?.action_plan||"",price_details:found?.price_details||""};}));
   setFunnelBusy(false);
  }
- function editStage(n:number,key:"title"|"description"|"goal"|"action_plan",value:string){setStages(old=>old.map(s=>s.stage_number===n?{...s,[key]:value}:s));}
+ function editStage(n:number,key:"title"|"description"|"goal"|"action_plan"|"price_details",value:string){setStages(old=>old.map(s=>s.stage_number===n?{...s,[key]:value}:s));}
  async function saveFunnel(){
   if(!sb||!selected||!(role==="admin"||role==="staff"))return;
   setFunnelBusy(true);setFunnelMessage("");
@@ -96,6 +96,7 @@ export default function AdminMembersPage(){
     {stages.map(stage=><div key={stage.stage_number} style={{padding:16,marginBottom:14,border:"1px solid #e2e8f0",borderRadius:10,display:"grid",gap:10}}>
      <h3>第 {stage.stage_number} 階段｜{stageLabels[stage.stage_number-1]}</h3>
      <label>階段名稱<input style={fieldStyle} maxLength={150} value={stage.title} onChange={e=>editStage(stage.stage_number,"title",e.target.value)}/></label>
+     <label>產品／服務價格（可填會員價、非會員價或多種活動價格）<textarea style={fieldStyle} rows={2} placeholder="例如：會員 NT$150／非會員 NT$300" value={stage.price_details} onChange={e=>editStage(stage.stage_number,"price_details",e.target.value)}/></label>
      <label>內容說明<textarea style={fieldStyle} rows={3} value={stage.description} onChange={e=>editStage(stage.stage_number,"description",e.target.value)}/></label>
      <label>階段目標<textarea style={fieldStyle} rows={2} value={stage.goal} onChange={e=>editStage(stage.stage_number,"goal",e.target.value)}/></label>
      <label>執行行動<textarea style={fieldStyle} rows={2} value={stage.action_plan} onChange={e=>editStage(stage.stage_number,"action_plan",e.target.value)}/></label>
