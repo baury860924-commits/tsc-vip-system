@@ -17,7 +17,14 @@ export default function LoginPage(){
   try{
    const client=createClient(url!,key!);
    const {error}=await client.auth.signInWithPassword({email:email.trim(),password});
-   if(error){setMessage("登入失敗，請確認電子郵件與密碼，或聯絡管理員開通帳號。");return;}
+   if(error){
+    const code=error.code;
+    if(code==="email_not_confirmed")setMessage("這個帳號的 Email 尚未完成驗證，請由 Supabase 管理員確認帳號狀態。");
+    else if(code==="over_email_send_rate_limit"||code==="over_request_rate_limit"||error.status===429)setMessage("驗證服務目前有請求次數限制，請稍後再試，不要連續重複登入。");
+    else if(code==="invalid_credentials")setMessage("電子郵件或密碼不正確，或此帳號尚未設定密碼。為保護帳號安全，系統不會透露帳號是否存在。請至 Supabase Authentication → Users 確認帳號。");
+    else setMessage("登入失敗（"+(code||"驗證錯誤")+"），請檢查 Supabase Authentication 設定。");
+    return;
+   }
    setMessage("驗證成功，但正式管理員權限及會員資料隔離尚未開通。請勿使用展示後台處理真實會員資料。");
   }catch{setMessage("登入服務暫時無法連線。");}
   finally{setBusy(false);}
