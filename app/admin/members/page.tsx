@@ -87,7 +87,7 @@ export default function AdminMembersPage(){
      <div style={{gridColumn:"1/-1"}}><button type="submit" disabled={saving||!name.trim()} style={{padding:"12px 22px",background:"#164e63",color:"white",border:0,borderRadius:8,cursor:"pointer"}}>{saving?"儲存中…":"新增雲端會員"}</button></div>
     </form>
    </section>
-   <p><a href="/admin/coaching">前往 VIP 陪跑管理 →</a></p>
+   <p><a href="/admin/coaching">前往 VIP 陪跑管理 →</a>　<a href="/admin/consultations">前往 VIP 諮詢管理 →</a></p>
    <h2>雲端會員名單（{members.length} 筆）</h2>
    {members.length===0?<p>尚未建立正式會員資料。原展示版測試資料不會自動匯入。</p>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["VIP 編號","姓名","公司","產業","合約起日","合約到期","登入綁定","銷售漏斗"].map(h=><th key={h} style={{padding:10,borderBottom:"2px solid #ddd"}}>{h}</th>)}</tr></thead><tbody>{members.map(m=><tr key={m.id}>{[m.vip_number||"未設定",m.name,m.company,m.industry,m.contract_start||"—",m.contract_end||"—",m.user_id?"已綁定":"尚未綁定"].map((v,i)=><td key={i} style={{padding:10,borderBottom:"1px solid #eee"}}>{v}</td>)}<td style={{padding:10,borderBottom:"1px solid #eee"}}><button type="button" onClick={()=>void openFunnel(m)}>編輯漏斗</button></td></tr>)}</tbody></table></div>}
    {selected&&<section style={{border:"1px solid #cbd5e1",borderRadius:12,padding:20,marginTop:24}}>
