@@ -37,7 +37,7 @@ export default function ReferralsAdmin(){
  const ranked=members.map(m=>({member:m,rows:items.filter(x=>x.referrer_member_id===m.id)})).sort((a,b)=>b.rows.length-a.rows.length);
  const metrics=(rows:Referral[])=>[["介紹案件",rows.length],["已記錄對象",personCount(rows)],["洽談中",rows.filter(x=>x.status==="洽談中").length],["已成交",rows.filter(x=>x.status==="已成交").length]];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
- return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
+ return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
  {loading?<p>正在讀取…</p>:ready?<>
  <nav style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
  <button onClick={()=>{setView("overview");setSelectedMember("");}} style={{padding:12,background:view==="overview"?"#164e63":"#e2e8f0",color:view==="overview"?"white":"#0f172a",border:0,borderRadius:8}}>介紹總覽</button>
