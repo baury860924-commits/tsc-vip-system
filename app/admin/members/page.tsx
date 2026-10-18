@@ -63,7 +63,7 @@ export default function AdminMembersPage(){
   e.preventDefault();
   if(!sb||role!=="admin"&&role!=="staff")return;
   setSaving(true);setMessage("");
-  const record={name:name.trim(),company:company.trim(),industry:industry.trim(),vip_number:vipNumber.trim()||null,contract_start:start||null,contract_end:end||null};
+  const record={name:name.trim(),company:company.trim(),industry:industry.trim(),vip_number:vipNumber.trim()||("VIP-"+String(Math.max(0,...members.map(m=>Number(m.vip_number?.match(/^VIP-(\d+)$/)?.[1]||0)))+1).padStart(4,"0")),contract_start:start||null,contract_end:end||null};
   const {data,error}=await sb.from("vip_members").insert(record).select("id,vip_number,name,company,industry,contract_start,contract_end,user_id,created_at").single();
   if(error)setMessage("新增失敗："+(error.code==="23505"?"VIP 編號重複":error.code||"請確認資料庫權限"));
   else if(data){setMembers(old=>[data,...old]);setName("");setCompany("");setIndustry("");setVipNumber("");setStart("");setEnd("");setMessage("已新增至 Supabase 雲端會員資料庫。");}
@@ -74,14 +74,14 @@ export default function AdminMembersPage(){
   <a href="/account">← 返回帳號中心</a><h1>VIP 會員管理｜正式雲端版</h1>
   {loading?<p>正在驗證帳號與讀取會員名單…</p>:role==="admin"||role==="staff"?<>
    <p>目前角色：<strong>{role==="admin"?"管理員":"工作人員"}</strong>。本頁資料由 Supabase 讀取，不使用展示版瀏覽器儲存。</p>
-   <p style={{background:"#fff4d6",padding:14,borderRadius:8}}>第一階段僅提供基本會員建檔。尚未連接訪談、錄音、諮詢與各會員的銷售漏斗。請勿在此輸入身分證、醫療或財務等敏感資料。</p>
+   <p style={{background:"#fff4d6",padding:14,borderRadius:8}}>目前支援基本會員建檔與獨立銷售漏斗。訪談、錄音與諮詢尚未連接正式雲端資料庫。請勿在此輸入身分證、醫療或財務等敏感資料。</p>
    <section style={{padding:20,border:"1px solid #ddd",borderRadius:12,marginBottom:24}}>
     <h2>新增 VIP 會員</h2>
     <form onSubmit={addMember} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
      <label>姓名 *<input required maxLength={100} style={fieldStyle} value={name} onChange={e=>setName(e.target.value)}/></label>
      <label>公司<input maxLength={150} style={fieldStyle} value={company} onChange={e=>setCompany(e.target.value)}/></label>
      <label>產業<input maxLength={100} style={fieldStyle} value={industry} onChange={e=>setIndustry(e.target.value)}/></label>
-     <label>VIP 編號（選填）<input maxLength={30} style={fieldStyle} placeholder="例如 VIP-0001" value={vipNumber} onChange={e=>setVipNumber(e.target.value)}/></label>
+     <label>VIP 編號（留白則自動產生）<input maxLength={30} style={fieldStyle} placeholder="例如 VIP-0001" value={vipNumber} onChange={e=>setVipNumber(e.target.value)}/></label>
      <label>合約開始日<input type="date" style={fieldStyle} value={start} onChange={e=>setStart(e.target.value)}/></label>
      <label>合約到期日<input type="date" min={start||undefined} style={fieldStyle} value={end} onChange={e=>setEnd(e.target.value)}/></label>
      <div style={{gridColumn:"1/-1"}}><button type="submit" disabled={saving||!name.trim()} style={{padding:"12px 22px",background:"#164e63",color:"white",border:0,borderRadius:8,cursor:"pointer"}}>{saving?"儲存中…":"新增雲端會員"}</button></div>
