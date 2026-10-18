@@ -25,7 +25,7 @@ export default function LoginPage(){
     else setMessage("登入失敗（"+(code||"驗證錯誤")+"），請檢查 Supabase Authentication 設定。");
     return;
    }
-   setMessage("驗證成功，但正式管理員權限及會員資料隔離尚未開通。請勿使用展示後台處理真實會員資料。");
+   window.location.assign("/account");
   }catch{setMessage("登入服務暫時無法連線。");}
   finally{setBusy(false);}
  }
