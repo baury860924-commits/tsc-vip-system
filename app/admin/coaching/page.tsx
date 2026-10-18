@@ -46,7 +46,7 @@ export default function CoachingPage(){
   if(!client||!id)return;
   setBusy(true);
   const {data,error}=await client.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",id).order("contact_date",{ascending:false}).limit(100);
-  if(error)setNotice(error.code==="42P01"?"尚未建立陪跑資料表，請先執行 SQL。":"讀取陪跑紀錄失敗："+(error.code||"權限錯誤"));
+  if(error)setNotice(["42P01","PGRST205"].includes(error.code||"")?"尚未建立陪跑資料表，請先執行 SQL。":"讀取陪跑紀錄失敗："+(error.code||"權限錯誤"));
   else setRecords(data||[]);
   setBusy(false);
  }
@@ -54,7 +54,7 @@ export default function CoachingPage(){
   e.preventDefault();if(!client||!authorized||!selected)return;
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
-  if(error)setNotice("儲存失敗："+(error.code==="42P01"?"資料表尚未建立":error.code||"權限錯誤"));
+  if(error)setNotice("儲存失敗："+(["42P01","PGRST205"].includes(error.code||"")?"陪跑資料表尚未建立，請先執行 SQL 設定":error.code||"權限錯誤"));
   else if(data){setRecords(old=>[data,...old]);const now=new Date();const month=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
   setBusy(false);
  }
@@ -73,8 +73,8 @@ export default function CoachingPage(){
     <form onSubmit={save} style={{display:"grid",gap:14}}>
      <label>聯繫日期<input required type="date" value={date} onChange={e=>setDate(e.target.value)} style={inputStyle}/></label>
      <label>聯繫方式<select style={inputStyle} value={method} onChange={e=>setMethod(e.target.value)}>{["LINE","電話","視訊","實體","其他"].map(x=><option key={x}>{x}</option>)}</select></label>
-     <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",width:"fit-content"}}><input type="checkbox" style={{width:18,height:18,margin:0,flexShrink:0}} checked={invited} onChange={e=>setInvited(e.target.checked)}/><span>已發出本月主動邀約</span></label>
-     <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",width:"fit-content"}}><input type="checkbox" style={{width:18,height:18,margin:0,flexShrink:0}} checked={replied} onChange={e=>setReplied(e.target.checked)}/><span>會員已回覆</span></label>
+     <label style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-start",gap:10,cursor:"pointer",maxWidth:360}}><input type="checkbox" style={{appearance:"auto",display:"inline-block",width:18,minWidth:18,maxWidth:18,height:18,margin:0,padding:0,flex:"0 0 18px"}} checked={invited} onChange={e=>setInvited(e.target.checked)}/><span>已發出本月主動邀約</span></label>
+     <label style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-start",gap:10,cursor:"pointer",maxWidth:360}}><input type="checkbox" style={{appearance:"auto",display:"inline-block",width:18,minWidth:18,maxWidth:18,height:18,margin:0,padding:0,flex:"0 0 18px"}} checked={replied} onChange={e=>setReplied(e.target.checked)}/><span>會員已回覆</span></label>
      <label>訪談／聯繫摘要<textarea style={inputStyle} rows={4} value={summary} onChange={e=>setSummary(e.target.value)}/></label>
      <label>後續待辦<textarea style={inputStyle} rows={2} value={nextAction} onChange={e=>setNextAction(e.target.value)}/></label>
      <label>下次追蹤日期<input type="date" style={inputStyle} value={followDate} onChange={e=>setFollowDate(e.target.value)}/></label>
