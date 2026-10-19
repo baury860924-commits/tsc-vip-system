@@ -11,7 +11,7 @@ export default function ReferralsAdmin(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<Member[]>([]),[items,setItems]=useState<Referral[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
- const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState("");
+ const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState("");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
  const [channel,setChannel]=useState("咖啡聚會"),[channelFilter,setChannelFilter]=useState("全部類型");
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
@@ -35,6 +35,7 @@ export default function ReferralsAdmin(){
  if(error)setNotice("更新失敗："+error.message);else if(data){setItems(old=>old.map(x=>x.id===id?data:x));setEditing(null);setNotice("已更新轉介紹進度");}setBusy(false);}
  const scoped=items.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
  const scopedLeads=leads.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
+ const searchedLeads=scopedLeads.filter(x=>(x.display_name||x.lead_code).toLocaleLowerCase().includes(leadSearch.trim().toLocaleLowerCase()));
  const visible=scoped.filter(x=>(filter==="全部"||x.status===filter)&&(channelFilter==="全部類型"||x.referral_type===(channelFilter==="TSC 活動"?"咖啡聚會":channelFilter)));
  const personCount=(rows:Referral[])=>new Set(rows.map(x=>x.lead_id||("legacy:"+x.referrer_member_id+":"+x.lead_label.trim().toLocaleLowerCase())).filter(x=>!x.endsWith(":"))).size;
  const ranked=members.map(m=>({member:m,rows:items.filter(x=>x.referrer_member_id===m.id),friends:leads.filter(x=>x.referrer_member_id===m.id)})).sort((a,b)=>b.friends.length-a.friends.length);
@@ -54,6 +55,22 @@ export default function ReferralsAdmin(){
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
  {channels.map(c=><div key={c} style={{border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{c}</div><strong style={{fontSize:24}}>{c==="TSC 活動"?scopedLeads.filter(x=>x.coffee_stage==="已報名").length:c==="藍海定位一日課"?scopedLeads.filter(x=>x.positioning_stage==="已報名").length:c==="VIP 陪跑"?scopedLeads.filter(x=>x.vip_stage==="已加入").length:scoped.filter(x=>x.referral_type===c).length}</strong><div style={{fontSize:13}}>{c==="VIP 互相轉介紹"?"筆介紹案件":c==="VIP 陪跑"?"位已加入":"位已報名"}</div></div>)}</div>
  {view==="overview"&&<section style={{marginBottom:28}}><h2>會員介紹排行榜</h2><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["會員","新朋友人數","TSC 活動已報名","藍海課已報名","VIP 已加入","互相轉介紹案件","詳細"].map(h=><th key={h} style={{padding:10,textAlign:"left",borderBottom:"1px solid #cbd5e1"}}>{h}</th>)}</tr></thead><tbody>{ranked.map(({member:m,rows,friends})=><tr key={m.id}><td style={{padding:10,borderBottom:"1px solid #e2e8f0"}}>{nameOf(m.id)}</td><td>{friends.length}</td><td>{friends.filter(x=>x.coffee_stage==="已報名").length}</td><td>{friends.filter(x=>x.positioning_stage==="已報名").length}</td><td>{friends.filter(x=>x.vip_stage==="已加入").length}</td><td>{rows.filter(x=>x.referral_type==="VIP 互相轉介紹").length}</td><td><button onClick={()=>openMember(m.id)}>查看</button></td></tr>)}</tbody></table></div></section>}
+ <section style={{border:"1px solid #cbd5e1",padding:20,borderRadius:12,marginBottom:24}}>
+ <h2>{view==="overview"?"新朋友姓名與轉換明細":"此會員介紹的新朋友"}（{scopedLeads.length} 人）</h2>
+ <p style={{color:"#475569"}}>以新朋友姓名為主，三階段實績各自計算。點選「管理檔案」可更新報名或加入狀態。</p>
+ <label>搜尋新朋友姓名<input type="search" style={{...field,maxWidth:380}} placeholder="輸入姓名查詢" value={leadSearch} onChange={e=>setLeadSearch(e.target.value)}/></label>
+ <div style={{overflowX:"auto",marginTop:14}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:600}}>
+ <thead><tr>{["新朋友姓名","介紹人","TSC 活動","藍海定位課","VIP 陪跑","操作"].map(h=><th key={h} style={{textAlign:"left",padding:12,borderBottom:"2px solid #cbd5e1"}}>{h}</th>)}</tr></thead>
+ <tbody>{searchedLeads.map(l=><tr key={l.id}>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0",fontWeight:600}}>{l.display_name||"未填姓名"}</td>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{nameOf(l.referrer_member_id)}</td>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{l.coffee_stage}</td>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{l.positioning_stage}</td>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{l.vip_stage}</td>
+ <td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}><a href={"/admin/leads?lead="+encodeURIComponent(l.id)}>管理檔案 →</a></td>
+ </tr>)}</tbody></table></div>
+ {searchedLeads.length===0&&<p>目前沒有符合條件的新朋友。</p>}
+ </section>
  <section style={{border:"1px solid #cbd5e1",padding:20,borderRadius:12,marginBottom:24}}><h2>新增轉介紹紀錄</h2><form onSubmit={create} style={{display:"grid",gap:14}}>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:14}}>
  <label>介紹人 VIP *<select required style={field} value={referrer} onChange={e=>{setReferrer(e.target.value);setLeadId("");}}><option value="">請選擇介紹人</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select></label>
