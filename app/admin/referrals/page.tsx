@@ -23,6 +23,8 @@ export default function ReferralsAdmin(){
  if(!active)return;if(m.error||r.error||l.error){setNotice("讀取失敗，請先執行轉介紹資料表 SQL："+(r.error?.message||l.error?.message||m.error?.message));return;}
  setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
  }catch{if(active)setNotice("資料庫連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
+ useEffect(()=>{try{const saved=window.localStorage.getItem("tsc_workbench_owner");if(saved)setWorkbenchOwner(saved);}catch{}},[]);
+ const chooseWorkbenchOwner=(value:string)=>{setWorkbenchOwner(value);try{if(value)window.localStorage.setItem("tsc_workbench_owner",value);else window.localStorage.removeItem("tsc_workbench_owner");}catch{}};
  const nameOf=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function create(e:React.FormEvent){e.preventDefault();if(!sb||!ready||!referrer||!date||(channel==="VIP 互相轉介紹"&&(!recipient||referrer===recipient)))return;
  setBusy(true);setNotice("");
@@ -61,8 +63,9 @@ export default function ReferralsAdmin(){
  <button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
  {workbench&&<div style={{marginTop:18}}>
  <h2 style={{marginTop:0}}>工作人員待辦工作台</h2>
- <p>目前依「負責人姓名」篩選，尚未與登入帳號綁定。請先選擇工作人員；此頁僅供已授權的管理員及工作人員使用。</p>
- <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>setWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+ <p>目前依「負責人姓名」篩選，尚未與登入帳號綁定。選擇一次後，此裝置會記住上次選擇（並非身分驗證或帳號權限設定）。</p>
+ <button type="button" onClick={()=>{setWorkbench(true);setView("overview");}} style={{marginBottom:12,marginRight:10,padding:"10px 14px",border:"1px solid #164e63",borderRadius:8,background:"white",color:"#164e63"}}>重新整理待辦請重開此頁</button>
+ <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>chooseWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
  {workbenchOwner&&<>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,margin:"16px 0"}}>
  {["已逾期","今日到期","未排定","未來追蹤"].map(k=><div key={k} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{k}</div><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)===k).length}</strong></div>)}</div>
