@@ -4,12 +4,13 @@ import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 type Assignment={id:string;lead_id:string;previous_staff_name:string|null;new_staff_name:string|null;changed_at:string;changed_by_user_id:string|null};
 type Contact={id:string;lead_id:string;contacted_on:string;staff_name:string;result:string;next_follow_up_date:string|null;created_at:string};
 type M={id:string;name:string;vip_number:string|null};
+type Staff={id:string;display_name:string;is_active:boolean};
 type Lead={id:string;referrer_member_id:string;lead_code:string;display_name:string;first_referred_at:string;interest_coffee:boolean;interest_positioning:boolean;interest_vip:boolean;coffee_stage:string;positioning_stage:string;vip_stage:string;notes:string;assigned_staff_name?:string|null;last_contact_date?:string|null;next_follow_up_date?:string|null;contact_result?:string|null};
 const interestBox={display:"flex",alignItems:"center",gap:14,padding:14,border:"1px solid #cbd5e1",borderRadius:10,cursor:"pointer",minHeight:58};
 const checkStyle={width:28,height:28,minWidth:28,minHeight:28,flexShrink:0,accentColor:"#164e63",cursor:"pointer"};
 const field={width:"100%",boxSizing:"border-box" as const,padding:11,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
 export default function LeadManagement(){
- const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
+ const [staffDirectory,setStaffDirectory]=useState<Staff[]>([]),[sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [assignments,setAssignments]=useState<Assignment[]>([]),[assignmentReady,setAssignmentReady]=useState(false);
  const [history,setHistory]=useState<Contact[]>([]),[historyReady,setHistoryReady]=useState(false),[historyBusy,setHistoryBusy]=useState(false),[historyNotice,setHistoryNotice]=useState("");
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
@@ -17,10 +18,10 @@ export default function LeadManagement(){
  const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState(""),[owner,setOwner]=useState(""),[lastContact,setLastContact]=useState(""),[nextContact,setNextContact]=useState(""),[contactResult,setContactResult]=useState("");
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setLoading(false);setNotice("Supabase 未設定");return;}
  const client=createClient(url,key);setSb(client);let active=true;void(async()=>{try{const {data:{session}}=await client.auth.getSession();const user=session?.user;if(!user){setNotice("請先登入");return;}
- const [profile,m,l]=await Promise.all([client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle(),client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referral_leads").select("*").order("first_referred_at",{ascending:false}).limit(500)]);
+ const [profile,m,l,staff]=await Promise.all([client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle(),client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referral_leads").select("*").order("first_referred_at",{ascending:false}).limit(500),client.from("tsc_staff_directory").select("id,display_name,is_active").order("display_name")]);
  const p=profile.data;if(!["admin","staff"].includes(p?.role||"")){setNotice("需要管理員權限");return;}
  if(!active)return;if(m.error||l.error){setNotice("請先執行被介紹者檔案 SQL："+(l.error?.message||m.error?.message));return;}
- setMembers(m.data||[]);setLeads(l.data||[]);setReady(true);
+ setMembers(m.data||[]);setLeads(l.data||[]);setStaffDirectory(staff.data||[]);setReady(true);
  const linkedId=new URLSearchParams(window.location.search).get("lead");const linked=(l.data||[]).find(x=>x.id===linkedId);
  if(linked){void loadAssignmentsFrom(client,linked.id);const {data:logs,error:logsError}=await client.from("vip_lead_contact_history").select("*").eq("lead_id",linked.id).order("created_at",{ascending:false}).limit(100);setHistory(logs||[]);setHistoryReady(!logsError);setHistoryNotice(logsError?"聯繫歷程資料表尚未啟用，請先執行 SQL。":"");setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");setOwner(linked.assigned_staff_name||"");setLastContact(linked.last_contact_date||"");setNextContact(linked.next_follow_up_date||"");setContactResult(linked.contact_result||"");}
  }catch{if(active)setNotice("連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
@@ -98,7 +99,7 @@ export default function LeadManagement(){
  <div style={{marginTop:20,padding:16,border:"1px solid #cbd5e1",borderRadius:12,background:"#f8fafc"}}>
  <h3 style={{marginTop:0}}>追蹤責任與聯繫紀錄</h3>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:14}}>
- <label>追蹤負責人<input list="tsc-staff-options" style={field} value={owner} onChange={e=>setOwner(e.target.value)} placeholder="選擇或輸入負責人"/><datalist id="tsc-staff-options"><option value="李心瑜"/><option value="吳如虹"/><option value="陳柏儒"/></datalist></label>
+ <label>追蹤負責人<select style={field} value={owner} onChange={e=>setOwner(e.target.value)}><option value="">未指派</option>{staffDirectory.filter(st=>st.is_active||st.display_name===owner).map(st=><option key={st.id} value={st.display_name}>{st.display_name}{st.is_active?"":"（已停用，僅供保留原紀錄）"}</option>)}{owner&&!staffDirectory.some(st=>st.display_name===owner)&&<option value={owner}>{owner}（舊資料，請重新指派）</option>}</select><small>請指派給啟用中的人員；更改後按下儲存。<a href="/admin/staff">管理工作人員 →</a></small></label>
  <label>最後聯繫日期<input type="date" style={field} value={lastContact} onChange={e=>setLastContact(e.target.value)}/></label>
  <label>下次追蹤日期<input type="date" style={field} value={nextContact} onChange={e=>setNextContact(e.target.value)}/></label>
  </div>
