@@ -11,7 +11,7 @@ export default function ReferralsAdmin(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<Member[]>([]),[items,setItems]=useState<Referral[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
- const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState("");
+ const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
  const [channel,setChannel]=useState("咖啡聚會"),[channelFilter,setChannelFilter]=useState("全部類型");
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
@@ -40,6 +40,9 @@ export default function ReferralsAdmin(){
  const personCount=(rows:Referral[])=>new Set(rows.map(x=>x.lead_id||("legacy:"+x.referrer_member_id+":"+x.lead_label.trim().toLocaleLowerCase())).filter(x=>!x.endsWith(":"))).size;
  const ranked=members.map(m=>({member:m,rows:items.filter(x=>x.referrer_member_id===m.id),friends:leads.filter(x=>x.referrer_member_id===m.id)})).sort((a,b)=>b.friends.length-a.friends.length);
  const metrics=(rows:Referral[],friends:Lead[])=>[["介紹新朋友",friends.length],["TSC 活動已報名",friends.filter(x=>x.coffee_stage==="已報名").length],["藍海定位課已報名",friends.filter(x=>x.positioning_stage==="已報名").length],["VIP 已加入",friends.filter(x=>x.vip_stage==="已加入").length],["介紹案件",rows.length]];
+ const followStage=(l:Lead)=>l.vip_stage==="已加入"?"已完成":l.vip_stage==="已報名"?"VIP 已報名待加入":l.positioning_stage==="已報名"?"藍海課已報名待加入 VIP":l.coffee_stage==="已報名"?"TSC 活動已報名待藍海課":"尚未報名 TSC 活動";
+ const followList=scopedLeads.filter(l=>followStage(l)!=="已完成"&&(followFilter==="全部待追蹤"||followStage(l)===followFilter));
+ const followKinds=["全部待追蹤","VIP 已報名待加入","藍海課已報名待加入 VIP","TSC 活動已報名待藍海課","尚未報名 TSC 活動"];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
  return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
  {loading?<p>正在讀取…</p>:ready?<>
@@ -54,6 +57,16 @@ export default function ReferralsAdmin(){
  <p style={{color:"#475569"}}>新朋友人數與三階段實績以「新朋友檔案」為準：TSC 活動及藍海定位課計算已報名，VIP 計算已加入。介紹案件另行統計，不與新朋友人數相加。</p>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
  {channels.map(c=><div key={c} style={{border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{c}</div><strong style={{fontSize:24}}>{c==="TSC 活動"?scopedLeads.filter(x=>x.coffee_stage==="已報名").length:c==="藍海定位一日課"?scopedLeads.filter(x=>x.positioning_stage==="已報名").length:c==="VIP 陪跑"?scopedLeads.filter(x=>x.vip_stage==="已加入").length:scoped.filter(x=>x.referral_type===c).length}</strong><div style={{fontSize:13}}>{c==="VIP 互相轉介紹"?"筆介紹案件":c==="VIP 陪跑"?"位已加入":"位已報名"}</div></div>)}</div>
+ <section style={{border:"1px solid #cbd5e1",borderRadius:12,padding:20,marginBottom:28}}>
+ <h2>待追蹤名單（{followList.length} 人）</h2>
+ <p style={{color:"#475569"}}>依目前報名狀態自動分類，優先關注已報名但尚未完成下一階段的人。此清單不代表已完成實際聯繫。</p>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:16}}>
+ {followKinds.slice(1).map(k=><div key={k} style={{padding:12,background:"#f8fafc",borderRadius:9,border:"1px solid #e2e8f0"}}><div style={{fontSize:13}}>{k}</div><strong style={{fontSize:24}}>{scopedLeads.filter(l=>followStage(l)===k).length}</strong></div>)}</div>
+ <label>依追蹤階段篩選<select style={{...field,maxWidth:420}} value={followFilter} onChange={e=>setFollowFilter(e.target.value)}>{followKinds.map(k=><option key={k}>{k}</option>)}</select></label>
+ <div style={{overflowX:"auto",marginTop:16}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:560}}><thead><tr>{["新朋友姓名","介紹人","目前待追蹤階段","檔案"].map(h=><th key={h} style={{padding:12,textAlign:"left",borderBottom:"2px solid #cbd5e1"}}>{h}</th>)}</tr></thead>
+ <tbody>{followList.map(l=><tr key={l.id}><td style={{padding:12,borderBottom:"1px solid #e2e8f0",fontWeight:600}}>{l.display_name||"未填姓名"}</td><td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{nameOf(l.referrer_member_id)}</td><td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}>{followStage(l)}</td><td style={{padding:12,borderBottom:"1px solid #e2e8f0"}}><a href={"/admin/leads?lead="+encodeURIComponent(l.id)}>查看／更新 →</a></td></tr>)}</tbody></table></div>
+ {followList.length===0&&<p>目前沒有符合條件的待追蹤對象。</p>}
+ </section>
  {view==="overview"&&<section style={{marginBottom:28}}><h2>會員介紹排行榜</h2><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["會員","新朋友人數","TSC 活動已報名","藍海課已報名","VIP 已加入","互相轉介紹案件","詳細"].map(h=><th key={h} style={{padding:10,textAlign:"left",borderBottom:"1px solid #cbd5e1"}}>{h}</th>)}</tr></thead><tbody>{ranked.map(({member:m,rows,friends})=><tr key={m.id}><td style={{padding:10,borderBottom:"1px solid #e2e8f0"}}>{nameOf(m.id)}</td><td>{friends.length}</td><td>{friends.filter(x=>x.coffee_stage==="已報名").length}</td><td>{friends.filter(x=>x.positioning_stage==="已報名").length}</td><td>{friends.filter(x=>x.vip_stage==="已加入").length}</td><td>{rows.filter(x=>x.referral_type==="VIP 互相轉介紹").length}</td><td><button onClick={()=>openMember(m.id)}>查看</button></td></tr>)}</tbody></table></div></section>}
  <section style={{border:"1px solid #cbd5e1",padding:20,borderRadius:12,marginBottom:24}}>
  <h2>{view==="overview"?"新朋友姓名與轉換明細":"此會員介紹的新朋友"}（{scopedLeads.length} 人）</h2>
