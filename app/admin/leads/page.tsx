@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
+type Assignment={id:string;lead_id:string;previous_staff_name:string|null;new_staff_name:string|null;changed_at:string;changed_by_user_id:string|null};
 type Contact={id:string;lead_id:string;contacted_on:string;staff_name:string;result:string;next_follow_up_date:string|null;created_at:string};
 type M={id:string;name:string;vip_number:string|null};
 type Lead={id:string;referrer_member_id:string;lead_code:string;display_name:string;first_referred_at:string;interest_coffee:boolean;interest_positioning:boolean;interest_vip:boolean;coffee_stage:string;positioning_stage:string;vip_stage:string;notes:string;assigned_staff_name?:string|null;last_contact_date?:string|null;next_follow_up_date?:string|null;contact_result?:string|null};
@@ -9,6 +10,7 @@ const checkStyle={width:28,height:28,minWidth:28,minHeight:28,flexShrink:0,accen
 const field={width:"100%",boxSizing:"border-box" as const,padding:11,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
 export default function LeadManagement(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
+ const [assignments,setAssignments]=useState<Assignment[]>([]),[assignmentReady,setAssignmentReady]=useState(false);
  const [history,setHistory]=useState<Contact[]>([]),[historyReady,setHistoryReady]=useState(false),[historyBusy,setHistoryBusy]=useState(false),[historyNotice,setHistoryNotice]=useState("");
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [member,setMember]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
@@ -20,18 +22,24 @@ export default function LeadManagement(){
  if(!active)return;if(m.error||l.error){setNotice("請先執行被介紹者檔案 SQL："+(l.error?.message||m.error?.message));return;}
  setMembers(m.data||[]);setLeads(l.data||[]);setReady(true);
  const linkedId=new URLSearchParams(window.location.search).get("lead");const linked=(l.data||[]).find(x=>x.id===linkedId);
- if(linked){const {data:logs,error:logsError}=await client.from("vip_lead_contact_history").select("*").eq("lead_id",linked.id).order("created_at",{ascending:false}).limit(100);setHistory(logs||[]);setHistoryReady(!logsError);setHistoryNotice(logsError?"聯繫歷程資料表尚未啟用，請先執行 SQL。":"");setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");setOwner(linked.assigned_staff_name||"");setLastContact(linked.last_contact_date||"");setNextContact(linked.next_follow_up_date||"");setContactResult(linked.contact_result||"");}
+ if(linked){void loadAssignmentsFrom(client,linked.id);const {data:logs,error:logsError}=await client.from("vip_lead_contact_history").select("*").eq("lead_id",linked.id).order("created_at",{ascending:false}).limit(100);setHistory(logs||[]);setHistoryReady(!logsError);setHistoryNotice(logsError?"聯繫歷程資料表尚未啟用，請先執行 SQL。":"");setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");setOwner(linked.assigned_staff_name||"");setLastContact(linked.last_contact_date||"");setNextContact(linked.next_follow_up_date||"");setContactResult(linked.contact_result||"");}
  }catch{if(active)setNotice("連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  const memberName=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function add(e:React.FormEvent){e.preventDefault();if(!sb||!member||!name.trim()||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").insert({referrer_member_id:member,lead_code:"FRIEND-"+crypto.randomUUID(),display_name:name.trim()}).select("*").single();
  if(error)setNotice(error.code==="23505"?"這位介紹人的對象代碼已存在，請開啟既有檔案更新。":"新增失敗："+error.message);
  else if(data){setLeads(old=>[data,...old]);setName("");setNotice("已建立被介紹者檔案");}setBusy(false);}
+ async function loadAssignmentsFrom(client:SupabaseClient,id:string){
+  setAssignments([]);setAssignmentReady(false);
+  const {data,error}=await client.from("vip_lead_assignment_history").select("id,lead_id,previous_staff_name,new_staff_name,changed_at,changed_by_user_id").eq("lead_id",id).order("changed_at",{ascending:false}).limit(100);
+  if(error){setAssignmentReady(false);return;}
+  setAssignments(data||[]);setAssignmentReady(true);
+ }
  async function loadHistory(id:string){if(!sb)return;const {data,error}=await sb.from("vip_lead_contact_history").select("*").eq("lead_id",id).order("created_at",{ascending:false}).limit(100);setHistory(data||[]);setHistoryReady(!error);setHistoryNotice(error?"聯繫歷程資料表尚未啟用，請先執行 SQL。":"");}
- function choose(l:Lead){void loadHistory(l.id);setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes||"");setOwner(l.assigned_staff_name||"");setLastContact(l.last_contact_date||"");setNextContact(l.next_follow_up_date||"");setContactResult(l.contact_result||"");}
+ function choose(l:Lead){if(sb)void loadAssignmentsFrom(sb,l.id);void loadHistory(l.id);setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes||"");setOwner(l.assigned_staff_name||"");setLastContact(l.last_contact_date||"");setNextContact(l.next_follow_up_date||"");setContactResult(l.contact_result||"");}
  async function save(){if(!sb||!selected||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,assigned_staff_name:owner.trim()||null,last_contact_date:lastContact||null,next_follow_up_date:nextContact||null,contact_result:contactResult.trim()||null,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
- if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");}setBusy(false);}
+ if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");if(sb&&(leads.find(l=>l.id===selected)?.assigned_staff_name||"")!==(data.assigned_staff_name||""))void loadAssignmentsFrom(sb,selected);}setBusy(false);}
  async function addHistory(){
  if(!sb||!selected||!owner.trim()||!contactResult.trim()||historyBusy)return;
  setHistoryBusy(true);setHistoryNotice("");
@@ -41,7 +49,7 @@ export default function LeadManagement(){
  else if(data){
   setHistory(old=>[data,...old]);
   const {data:updated,error:updateError}=await sb.from("vip_referral_leads").update({assigned_staff_name:owner.trim(),last_contact_date:contactDay,next_follow_up_date:nextContact||null,contact_result:contactResult.trim(),updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
-  if(updated){setLeads(old=>old.map(l=>l.id===selected?updated:l));setLastContact(contactDay);}
+  if(updated){if((leads.find(l=>l.id===selected)?.assigned_staff_name||"")!==(updated.assigned_staff_name||""))void loadAssignmentsFrom(sb,selected);setLeads(old=>old.map(l=>l.id===selected?updated:l));setLastContact(contactDay);}
   setHistoryNotice(updateError?"聯繫歷程已儲存，但新朋友摘要同步失敗："+updateError.message:"已儲存聯繫歷程，並同步更新最後聯繫日期與下次追蹤日期");
  }
  setHistoryBusy(false);
@@ -103,6 +111,14 @@ export default function LeadManagement(){
  {historyNotice&&<p role="status">{historyNotice}</p>}
  {history.length===0&&<p>尚無聯繫歷程。</p>}
  {history.map(h=><article key={h.id} style={{padding:12,borderBottom:"1px solid #e2e8f0"}}><strong>{h.contacted_on}｜{h.staff_name}</strong><p style={{whiteSpace:"pre-wrap",margin:"8px 0"}}>{h.result}</p><small>下次追蹤：{h.next_follow_up_date||"未設定"}</small></article>)}
+ </section>
+ <section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
+ <h3>負責人交接歷程（{assignments.length} 筆）</h3>
+ <p style={{fontSize:14,color:"#475569"}}>修改追蹤負責人並儲存後，系統會自動記錄原負責人、新負責人及變更時間。舊資料在啟用前的交接無法回溯。</p>
+ {!assignmentReady?<p style={{color:"#b45309"}}>交接紀錄尚未啟用或讀取失敗，請確認已執行交接紀錄 SQL。</p>:assignments.length===0?<p>尚無交接紀錄。</p>:assignments.map(a=><article key={a.id} style={{padding:"10px 0",borderBottom:"1px solid #e2e8f0"}}>
+ <strong>{new Date(a.changed_at).toLocaleString("zh-TW",{timeZone:"Asia/Taipei"})}</strong>
+ <div>{a.previous_staff_name||"未指派"} → {a.new_staff_name||"未指派"}</div>
+ </article>)}
  </section>
  <label style={{display:"block",marginTop:18}}>追蹤備註<textarea style={field} rows={4} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
  <button disabled={busy} onClick={()=>void save()} style={{padding:14,background:"#164e63",color:"white",border:0,borderRadius:8,marginTop:14,width:"100%",cursor:"pointer"}}>{busy?"儲存中…":"儲存轉換歷程"}</button>
