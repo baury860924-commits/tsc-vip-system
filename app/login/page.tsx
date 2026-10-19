@@ -3,8 +3,9 @@ import {useState} from "react";
 import {createClient} from "@supabase/supabase-js";
 
 export default function LoginPage(){
- const [email,setEmail]=useState("baury860924@gmail.com");
+ const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
+ const [mode,setMode]=useState<"email"|"password">("email");
  const [showPassword,setShowPassword]=useState(false);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
@@ -16,7 +17,7 @@ export default function LoginPage(){
   setBusy(true);setMessage("");
   try{
    const client=createClient(url!,key!);
-   const {error}=await client.auth.signInWithPassword({email:email.trim(),password});
+   const {error}=mode==="email"?await client.auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+"/auth/callback"}}):await client.auth.signInWithPassword({email:email.trim(),password});
    if(error){
     const code=error.code;
     if(code==="email_not_confirmed")setMessage("這個帳號的 Email 尚未完成驗證，請由 Supabase 管理員確認帳號狀態。");
@@ -25,7 +26,7 @@ export default function LoginPage(){
     else setMessage("登入失敗（"+(code||"驗證錯誤")+"），請檢查 Supabase Authentication 設定。");
     return;
    }
-   window.location.assign("/account");
+   if(mode==="email"){setMessage("登入驗證信已寄出，請到 Gmail 點擊連結。若未收到，請查看垃圾郵件。");return;}window.location.assign("/account");
   }catch{setMessage("登入服務暫時無法連線。");}
   finally{setBusy(false);}
  }
@@ -33,10 +34,10 @@ export default function LoginPage(){
   <a href="/" style={{color:"#155e75"}}>← 返回 VIP 系統展示頁</a>
   <h1>VIP 系統登入</h1>
   <p>管理人員與 VIP 會員登入入口</p>
-  <form onSubmit={submit} style={{display:"grid",gap:14}}>
+  <div style={{display:"flex",gap:8,marginBottom:16}}><button type="button" onClick={()=>setMode("email")} aria-pressed={mode==="email"}>Email 驗證信（免密碼）</button><button type="button" onClick={()=>setMode("password")} aria-pressed={mode==="password"}>密碼登入</button></div><form onSubmit={submit} style={{display:"grid",gap:14}}>
    <label htmlFor="email">電子郵件</label>
    <input id="email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com" style={{padding:12,border:"1px solid #aaa",borderRadius:8}}/>
-   <label htmlFor="password">密碼</label>
+   {mode==="password"&&<><label htmlFor="password">密碼</label>
    <div style={{display:"flex",border:"1px solid #aaa",borderRadius:8,overflow:"hidden"}}>
     <input id="password" type={showPassword?"text":"password"} autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="請輸入密碼" style={{flex:1,minWidth:0,padding:12,border:0}}/>
     <button type="button" aria-label={showPassword?"隱藏密碼":"顯示密碼"} aria-pressed={showPassword} title={showPassword?"隱藏密碼":"顯示密碼"} onClick={()=>setShowPassword(v=>!v)} style={{padding:"0 14px",border:0,background:"transparent",cursor:"pointer",fontSize:20}}>
@@ -44,7 +45,8 @@ export default function LoginPage(){
      <span style={{fontSize:12,marginLeft:5}}>{showPassword?"隱藏":"顯示"}</span>
     </button>
    </div>
-   <button disabled={!ready||busy} type="submit" style={{padding:12,border:0,borderRadius:8,background:"#164e63",color:"white",cursor:ready?"pointer":"not-allowed"}}>{busy?"驗證中…":"登入"}</button>
+   </>}
+   <button disabled={!ready||busy} type="submit" style={{padding:12,border:0,borderRadius:8,background:"#164e63",color:"white",cursor:ready?"pointer":"not-allowed"}}>{busy?"處理中…":mode==="email"?"寄送登入驗證信":"登入"}</button>
   </form>
   {message&&<p role="status">{message}</p>}
   {!ready&&<p style={{padding:12,background:"#fff4d6",borderRadius:8}}>登入尚未啟用：網站尚未完成 Supabase 連線設定。此處請勿輸入真實密碼。</p>}
