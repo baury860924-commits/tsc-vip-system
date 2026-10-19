@@ -9,7 +9,7 @@ const field={width:"100%",boxSizing:"border-box" as const,padding:11,border:"1px
 export default function LeadManagement(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
- const [member,setMember]=useState(""),[code,setCode]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
+ const [member,setMember]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
  const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState("");
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setLoading(false);setNotice("Supabase 未設定");return;}
  const client=createClient(url,key);setSb(client);let active=true;void(async()=>{try{const {data:{user}}=await client.auth.getUser();if(!user){setNotice("請先登入");return;}
@@ -19,24 +19,24 @@ export default function LeadManagement(){
  setMembers(m.data||[]);setLeads(l.data||[]);setReady(true);
  }catch{if(active)setNotice("連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  const memberName=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
- async function add(e:React.FormEvent){e.preventDefault();if(!sb||!member||!code.trim()||busy)return;setBusy(true);setNotice("");
- const {data,error}=await sb.from("vip_referral_leads").insert({referrer_member_id:member,lead_code:code.trim(),display_name:name.trim()}).select("*").single();
+ async function add(e:React.FormEvent){e.preventDefault();if(!sb||!member||!name.trim()||busy)return;setBusy(true);setNotice("");
+ const {data,error}=await sb.from("vip_referral_leads").insert({referrer_member_id:member,lead_code:"FRIEND-"+crypto.randomUUID(),display_name:name.trim()}).select("*").single();
  if(error)setNotice(error.code==="23505"?"這位介紹人的對象代碼已存在，請開啟既有檔案更新。":"新增失敗："+error.message);
- else if(data){setLeads(old=>[data,...old]);setCode("");setName("");setNotice("已建立被介紹者檔案");}setBusy(false);}
+ else if(data){setLeads(old=>[data,...old]);setName("");setNotice("已建立被介紹者檔案");}setBusy(false);}
  function choose(l:Lead){setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes);}
  async function save(){if(!sb||!selected||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");}setBusy(false);}
  const visible=leads.filter(l=>!filter||l.referrer_member_id===filter);
  const selectedLead=leads.find(l=>l.id===selected);
- return <main style={{maxWidth:1440,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/referrals">← 返回轉介紹總覽</a><h1>被介紹者與轉換歷程</h1><p>同一位新朋友建立一筆檔案，記錄對三項 TSC 服務的興趣及進展。用代碼辨識即可，請勿填入電話、身分證或其他敏感資訊。</p>
+ return <main style={{maxWidth:1440,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/referrals">← 返回轉介紹總覽</a><h1>被介紹者與轉換歷程</h1><p>同一位新朋友建立一筆檔案，記錄對三項 TSC 服務的興趣及進展。以姓名顯示新朋友，代碼由系統自動建立。新增前請確認沒有重複檔案，避免同名或重複計算。</p>
  {loading?<p>載入中…</p>:ready?<><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:24}}>
  {[["新朋友總數",leads.length],["TSC 活動已報名",leads.filter(x=>x.coffee_stage==="已報名").length],["藍海定位課已報名",leads.filter(x=>x.positioning_stage==="已報名").length],["已加入 VIP",leads.filter(x=>x.vip_stage==="已加入").length]].map(([title,value])=><div key={title} style={{border:"1px solid #cbd5e1",borderRadius:12,padding:18}}><div>{title}</div><strong style={{fontSize:28}}>{value}</strong></div>)}</div>
  <section style={{border:"1px solid #cbd5e1",borderRadius:12,padding:20,marginBottom:24}}><h2>新增新朋友檔案</h2><form onSubmit={add} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
  <label>介紹人 VIP<select style={field} required value={member} onChange={e=>setMember(e.target.value)}><option value="">選擇會員</option>{members.map(m=><option key={m.id} value={m.id}>{memberName(m.id)}</option>)}</select></label>
- <label>新朋友代碼 *<input style={field} required maxLength={80} placeholder="例如：FRIEND-001" value={code} onChange={e=>setCode(e.target.value)}/></label>
- <label>新朋友稱呼（選填）<input style={field} maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
- <button disabled={busy||!member||!code.trim()} style={{padding:12,background:"#164e63",color:"white",border:0,borderRadius:8,alignSelf:"end"}}>建立檔案</button></form></section>
+ 
+ <label>新朋友姓名 *<input required style={field} maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
+ <button disabled={busy||!member||!name.trim()} style={{padding:12,background:"#164e63",color:"white",border:0,borderRadius:8,alignSelf:"end"}}>建立檔案</button></form></section>
 
  <div className="leadWorkspace">
  <section style={{minWidth:0}}>
