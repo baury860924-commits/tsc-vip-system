@@ -12,7 +12,7 @@ const field={width:"100%",boxSizing:"border-box" as const,padding:11,border:"1px
 export default function LeadManagement(){
  const [staffDirectory,setStaffDirectory]=useState<Staff[]>([]),[sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [assignments,setAssignments]=useState<Assignment[]>([]),[assignmentReady,setAssignmentReady]=useState(false);
- const [history,setHistory]=useState<Contact[]>([]),[historyReady,setHistoryReady]=useState(false),[historyBusy,setHistoryBusy]=useState(false),[historyNotice,setHistoryNotice]=useState("");
+ const [quickResult,setQuickResult]=useState(""),[quickDate,setQuickDate]=useState(""),[quickBusy,setQuickBusy]=useState(false),[quickNotice,setQuickNotice]=useState(""),[history,setHistory]=useState<Contact[]>([]),[historyReady,setHistoryReady]=useState(false),[historyBusy,setHistoryBusy]=useState(false),[historyNotice,setHistoryNotice]=useState("");
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [member,setMember]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
  const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState(""),[owner,setOwner]=useState(""),[lastContact,setLastContact]=useState(""),[nextContact,setNextContact]=useState(""),[contactResult,setContactResult]=useState("");
@@ -37,7 +37,7 @@ export default function LeadManagement(){
   setAssignments(data||[]);setAssignmentReady(true);
  }
  async function loadHistory(id:string){if(!sb)return;const {data,error}=await sb.from("vip_lead_contact_history").select("*").eq("lead_id",id).order("created_at",{ascending:false}).limit(100);setHistory(data||[]);setHistoryReady(!error);setHistoryNotice(error?"聯繫歷程資料表尚未啟用，請先執行 SQL。":"");}
- function choose(l:Lead){if(sb)void loadAssignmentsFrom(sb,l.id);void loadHistory(l.id);setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes||"");setOwner(l.assigned_staff_name||"");setLastContact(l.last_contact_date||"");setNextContact(l.next_follow_up_date||"");setContactResult(l.contact_result||"");}
+ function choose(l:Lead){setQuickResult("");setQuickDate("");setQuickNotice("");if(sb)void loadAssignmentsFrom(sb,l.id);void loadHistory(l.id);setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes||"");setOwner(l.assigned_staff_name||"");setLastContact(l.last_contact_date||"");setNextContact(l.next_follow_up_date||"");setContactResult(l.contact_result||"");}
  async function save(){if(!sb||!selected||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,assigned_staff_name:owner.trim()||null,last_contact_date:lastContact||null,next_follow_up_date:nextContact||null,contact_result:contactResult.trim()||null,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");if(sb&&(leads.find(l=>l.id===selected)?.assigned_staff_name||"")!==(data.assigned_staff_name||""))void loadAssignmentsFrom(sb,selected);}setBusy(false);}
@@ -55,6 +55,7 @@ export default function LeadManagement(){
  }
  setHistoryBusy(false);
 }
+ async function quickSave(){if(!sb||!selected||quickBusy||!quickResult.trim())return;const current=leads.find(l=>l.id===selected);if(!current||!current.assigned_staff_name){setQuickNotice("請先指派追蹤負責人");return;}setQuickBusy(true);setQuickNotice("");const day=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});const {data,error}=await sb.from("vip_lead_contact_history").insert({lead_id:selected,staff_name:current.assigned_staff_name,contacted_on:day,result:quickResult.trim(),next_follow_up_date:quickDate||null}).select("*").single();if(error){setQuickNotice("新增失敗："+error.message);setQuickBusy(false);return;}if(data)setHistory(old=>[data,...old]);const {data:updated,error:syncError}=await sb.from("vip_referral_leads").update({last_contact_date:day,next_follow_up_date:quickDate||null,contact_result:quickResult.trim(),updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();if(updated){setLeads(old=>old.map(l=>l.id===selected?updated:l));setLastContact(day);setNextContact(quickDate);setContactResult(quickResult.trim());}setQuickNotice(syncError?"歷程已新增，但摘要更新失敗："+syncError.message:"聯繫紀錄已儲存");if(!syncError){setQuickResult("");setQuickDate("");}setQuickBusy(false);}
  const visible=leads.filter(l=>!filter||l.referrer_member_id===filter);
  const selectedLead=leads.find(l=>l.id===selected);
  return <main style={{maxWidth:1440,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/referrals">← 返回轉介紹總覽</a><h1>被介紹者與轉換歷程</h1><p>同一位新朋友建立一筆檔案，記錄對三項 TSC 服務的興趣及進展。以姓名顯示新朋友，代碼由系統自動建立。新增前請確認沒有重複檔案，避免同名或重複計算。</p>
@@ -81,7 +82,7 @@ export default function LeadManagement(){
  </div></section>
  <section style={{minWidth:0}}>
  {selectedLead?<div style={{border:"1px solid #cbd5e1",padding:22,borderRadius:12}}>
- <h2>{selectedLead.display_name||selectedLead.lead_code}｜轉換歷程</h2>
+ <h2>{selectedLead.display_name||selectedLead.lead_code}｜轉換歷程</h2><section style={{padding:16,background:"#ecfeff",border:"2px solid #0e7490",borderRadius:12,marginBottom:18}}><h3>快速記錄本次聯繫</h3><p>聯繫日期：今天。記錄人員：{selectedLead.assigned_staff_name||"尚未指派"}</p><label>聯繫結果 *<textarea rows={3} maxLength={1000} value={quickResult} onChange={e=>setQuickResult(e.target.value)} style={field}/></label><label style={{display:"block",marginTop:12}}>下次追蹤日期<input type="date" value={quickDate} onChange={e=>setQuickDate(e.target.value)} style={field}/></label><button type="button" disabled={quickBusy||!quickResult.trim()||!selectedLead.assigned_staff_name} onClick={()=>void quickSave()} style={{marginTop:12,padding:14,width:"100%",background:"#0f766e",color:"white",border:0,borderRadius:8}}>{quickBusy?"儲存中…":"儲存本次聯繫"}</button>{quickNotice&&<p role="status">{quickNotice}</p>}</section>
  <p>介紹人：{memberName(selectedLead.referrer_member_id)}<br/>代碼：{selectedLead.lead_code}</p>
  <div className="leadStages">
  <div style={{border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
