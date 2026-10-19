@@ -1,0 +1,1 @@
+export default function Loading() { return <main style={{padding:24}}><h1>TSC VIP</h1><p>資料載入中...</p></main>; }
