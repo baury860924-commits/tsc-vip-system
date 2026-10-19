@@ -32,7 +32,20 @@ export default function LeadManagement(){
  async function save(){if(!sb||!selected||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,assigned_staff_name:owner.trim()||null,last_contact_date:lastContact||null,next_follow_up_date:nextContact||null,contact_result:contactResult.trim()||null,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");}setBusy(false);}
- async function addHistory(){if(!sb||!selected||!owner.trim()||!contactResult.trim()||historyBusy)return;setHistoryBusy(true);setHistoryNotice("");const {data,error}=await sb.from("vip_lead_contact_history").insert({lead_id:selected,staff_name:owner.trim(),contacted_on:lastContact||new Date().toLocaleDateString("en-CA"),result:contactResult.trim(),next_follow_up_date:nextContact||null}).select("*").single();if(error){setHistoryNotice("新增紀錄失敗："+error.message);}else if(data){setHistory(old=>[data,...old]);setHistoryNotice("已新增一筆聯繫歷程（不會覆蓋舊紀錄）");}setHistoryBusy(false);}
+ async function addHistory(){
+ if(!sb||!selected||!owner.trim()||!contactResult.trim()||historyBusy)return;
+ setHistoryBusy(true);setHistoryNotice("");
+ const contactDay=lastContact||new Date().toLocaleDateString("en-CA");
+ const {data,error}=await sb.from("vip_lead_contact_history").insert({lead_id:selected,staff_name:owner.trim(),contacted_on:contactDay,result:contactResult.trim(),next_follow_up_date:nextContact||null}).select("*").single();
+ if(error){setHistoryNotice("新增紀錄失敗："+error.message);}
+ else if(data){
+  setHistory(old=>[data,...old]);
+  const {data:updated,error:updateError}=await sb.from("vip_referral_leads").update({assigned_staff_name:owner.trim(),last_contact_date:contactDay,next_follow_up_date:nextContact||null,contact_result:contactResult.trim(),updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
+  if(updated){setLeads(old=>old.map(l=>l.id===selected?updated:l));setLastContact(contactDay);}
+  setHistoryNotice(updateError?"聯繫歷程已儲存，但新朋友摘要同步失敗："+updateError.message:"已儲存聯繫歷程，並同步更新最後聯繫日期與下次追蹤日期");
+ }
+ setHistoryBusy(false);
+}
  const visible=leads.filter(l=>!filter||l.referrer_member_id===filter);
  const selectedLead=leads.find(l=>l.id===selected);
  return <main style={{maxWidth:1440,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/referrals">← 返回轉介紹總覽</a><h1>被介紹者與轉換歷程</h1><p>同一位新朋友建立一筆檔案，記錄對三項 TSC 服務的興趣及進展。以姓名顯示新朋友，代碼由系統自動建立。新增前請確認沒有重複檔案，避免同名或重複計算。</p>
@@ -42,6 +55,7 @@ export default function LeadManagement(){
  <label>介紹人 VIP<select style={field} required value={member} onChange={e=>setMember(e.target.value)}><option value="">選擇會員</option>{members.map(m=><option key={m.id} value={m.id}>{memberName(m.id)}</option>)}</select></label>
  
  <label>新朋友姓名 *<input required style={field} maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label>
+ {member&&name.trim()&&leads.some(l=>l.referrer_member_id===member&&l.display_name.trim().toLocaleLowerCase()===name.trim().toLocaleLowerCase())&&<p style={{color:"#b45309",gridColumn:"1/-1",margin:0}}>提醒：這位 VIP 已有同名新朋友，請先檢查既有檔案，避免重複計算；若確實是不同人仍可建立。</p>}
  <button disabled={busy||!member||!name.trim()} style={{padding:12,background:"#164e63",color:"white",border:0,borderRadius:8,alignSelf:"end"}}>建立檔案</button></form></section>
 
  <div className="leadWorkspace">
@@ -84,7 +98,7 @@ export default function LeadManagement(){
  </div>
  <section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
  <h3>聯繫歷程（{history.length} 筆）</h3>
- <p style={{fontSize:14,color:"#475569"}}>先填寫負責人、最後聯繫日期與最近聯繫結果，再按「新增聯繫紀錄」。歷史紀錄獨立保存，不會被下次更新覆蓋。</p>
+ <p style={{fontSize:14,color:"#475569"}}>填寫負責人、聯繫日期與聯繫結果，按「新增聯繫紀錄」即可同步更新新朋友的最後聯繫摘要與下次追蹤日期；不需再按一次儲存。歷史紀錄不會被覆蓋。</p>
  <button type="button" disabled={!historyReady||historyBusy||!owner.trim()||!contactResult.trim()} onClick={()=>void addHistory()} style={{padding:12,background:"#0f766e",color:"white",border:0,borderRadius:8,cursor:"pointer"}}>{historyBusy?"記錄中…":"＋ 新增聯繫紀錄"}</button>
  {historyNotice&&<p role="status">{historyNotice}</p>}
  {history.length===0&&<p>尚無聯繫歷程。</p>}
