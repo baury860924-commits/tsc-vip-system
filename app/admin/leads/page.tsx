@@ -14,7 +14,7 @@ export default function LeadManagement(){
  const [member,setMember]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
  const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState(""),[owner,setOwner]=useState(""),[lastContact,setLastContact]=useState(""),[nextContact,setNextContact]=useState(""),[contactResult,setContactResult]=useState("");
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setLoading(false);setNotice("Supabase 未設定");return;}
- const client=createClient(url,key);setSb(client);let active=true;void(async()=>{try{const {data:{user}}=await client.auth.getUser();if(!user){setNotice("請先登入");return;}
+ const client=createClient(url,key);setSb(client);let active=true;void(async()=>{try{const {data:{session}}=await client.auth.getSession();const user=session?.user;if(!user){setNotice("請先登入");return;}
  const {data:p}=await client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();if(!["admin","staff"].includes(p?.role||"")){setNotice("需要管理員權限");return;}
  const [m,l]=await Promise.all([client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referral_leads").select("*").order("first_referred_at",{ascending:false}).limit(500)]);
  if(!active)return;if(m.error||l.error){setNotice("請先執行被介紹者檔案 SQL："+(l.error?.message||m.error?.message));return;}
