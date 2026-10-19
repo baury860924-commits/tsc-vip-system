@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 type M={id:string;name:string;vip_number:string|null};
-type Lead={id:string;referrer_member_id:string;lead_code:string;display_name:string;first_referred_at:string;interest_coffee:boolean;interest_positioning:boolean;interest_vip:boolean;coffee_stage:string;positioning_stage:string;vip_stage:string;notes:string};
+type Lead={id:string;referrer_member_id:string;lead_code:string;display_name:string;first_referred_at:string;interest_coffee:boolean;interest_positioning:boolean;interest_vip:boolean;coffee_stage:string;positioning_stage:string;vip_stage:string;notes:string;assigned_staff_name?:string|null;last_contact_date?:string|null;next_follow_up_date?:string|null;contact_result?:string|null};
 const interestBox={display:"flex",alignItems:"center",gap:14,padding:14,border:"1px solid #cbd5e1",borderRadius:10,cursor:"pointer",minHeight:58};
 const checkStyle={width:28,height:28,minWidth:28,minHeight:28,flexShrink:0,accentColor:"#164e63",cursor:"pointer"};
 const field={width:"100%",boxSizing:"border-box" as const,padding:11,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
@@ -10,7 +10,7 @@ export default function LeadManagement(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<M[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [member,setMember]=useState(""),[name,setName]=useState(""),[selected,setSelected]=useState<string|null>(null),[filter,setFilter]=useState("");
- const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState("");
+ const [coffee,setCoffee]=useState(false),[positioning,setPositioning]=useState(false),[vip,setVip]=useState(false),[coffeeStage,setCoffeeStage]=useState("未報名"),[positioningStage,setPositioningStage]=useState("未報名"),[vipStage,setVipStage]=useState("未報名"),[notes,setNotes]=useState(""),[owner,setOwner]=useState(""),[lastContact,setLastContact]=useState(""),[nextContact,setNextContact]=useState(""),[contactResult,setContactResult]=useState("");
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setLoading(false);setNotice("Supabase 未設定");return;}
  const client=createClient(url,key);setSb(client);let active=true;void(async()=>{try{const {data:{user}}=await client.auth.getUser();if(!user){setNotice("請先登入");return;}
  const {data:p}=await client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();if(!["admin","staff"].includes(p?.role||"")){setNotice("需要管理員權限");return;}
@@ -18,16 +18,16 @@ export default function LeadManagement(){
  if(!active)return;if(m.error||l.error){setNotice("請先執行被介紹者檔案 SQL："+(l.error?.message||m.error?.message));return;}
  setMembers(m.data||[]);setLeads(l.data||[]);setReady(true);
  const linkedId=new URLSearchParams(window.location.search).get("lead");const linked=(l.data||[]).find(x=>x.id===linkedId);
- if(linked){setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");}
+ if(linked){setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");setOwner(linked.assigned_staff_name||"");setLastContact(linked.last_contact_date||"");setNextContact(linked.next_follow_up_date||"");setContactResult(linked.contact_result||"");}
  }catch{if(active)setNotice("連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  const memberName=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function add(e:React.FormEvent){e.preventDefault();if(!sb||!member||!name.trim()||busy)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referral_leads").insert({referrer_member_id:member,lead_code:"FRIEND-"+crypto.randomUUID(),display_name:name.trim()}).select("*").single();
  if(error)setNotice(error.code==="23505"?"這位介紹人的對象代碼已存在，請開啟既有檔案更新。":"新增失敗："+error.message);
  else if(data){setLeads(old=>[data,...old]);setName("");setNotice("已建立被介紹者檔案");}setBusy(false);}
- function choose(l:Lead){setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes);}
+ function choose(l:Lead){setSelected(l.id);setCoffee(l.interest_coffee);setPositioning(l.interest_positioning);setVip(l.interest_vip);setCoffeeStage(l.coffee_stage);setPositioningStage(l.positioning_stage);setVipStage(l.vip_stage);setNotes(l.notes||"");setOwner(l.assigned_staff_name||"");setLastContact(l.last_contact_date||"");setNextContact(l.next_follow_up_date||"");setContactResult(l.contact_result||"");}
  async function save(){if(!sb||!selected||busy)return;setBusy(true);setNotice("");
- const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
+ const {data,error}=await sb.from("vip_referral_leads").update({interest_coffee:coffee,interest_positioning:positioning,interest_vip:vip,coffee_stage:coffeeStage,positioning_stage:positioningStage,vip_stage:vipStage,notes,assigned_staff_name:owner.trim()||null,last_contact_date:lastContact||null,next_follow_up_date:nextContact||null,contact_result:contactResult.trim()||null,updated_at:new Date().toISOString()}).eq("id",selected).select("*").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setLeads(old=>old.map(l=>l.id===selected?data:l));setNotice("已儲存轉換歷程");}setBusy(false);}
  const visible=leads.filter(l=>!filter||l.referrer_member_id===filter);
  const selectedLead=leads.find(l=>l.id===selected);
@@ -69,6 +69,15 @@ export default function LeadManagement(){
  <label style={interestBox}><input style={checkStyle} type="checkbox" checked={vip} onChange={e=>setVip(e.target.checked)}/><span>對 VIP 陪跑有興趣</span></label>
  <label style={{display:"block",marginTop:14}}>報名／加入狀態<select style={field} value={vipStage} onChange={e=>setVipStage(e.target.value)}>{["未報名","已報名","已加入"].map(x=><option key={x}>{x}</option>)}</select></label>
  </div></div>
+ <div style={{marginTop:20,padding:16,border:"1px solid #cbd5e1",borderRadius:12,background:"#f8fafc"}}>
+ <h3 style={{marginTop:0}}>追蹤責任與聯繫紀錄</h3>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:14}}>
+ <label>追蹤負責人<input list="tsc-staff-options" style={field} value={owner} onChange={e=>setOwner(e.target.value)} placeholder="選擇或輸入負責人"/><datalist id="tsc-staff-options"><option value="李心瑜"/><option value="吳如虹"/><option value="陳柏儒"/></datalist></label>
+ <label>最後聯繫日期<input type="date" style={field} value={lastContact} onChange={e=>setLastContact(e.target.value)}/></label>
+ <label>下次追蹤日期<input type="date" style={field} value={nextContact} onChange={e=>setNextContact(e.target.value)}/></label>
+ </div>
+ <label style={{display:"block",marginTop:14}}>最近聯繫結果<textarea style={field} rows={2} maxLength={1000} value={contactResult} onChange={e=>setContactResult(e.target.value)} placeholder="例如：已邀約，對方下週回覆"/></label>
+ </div>
  <label style={{display:"block",marginTop:18}}>追蹤備註<textarea style={field} rows={4} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
  <button disabled={busy} onClick={()=>void save()} style={{padding:14,background:"#164e63",color:"white",border:0,borderRadius:8,marginTop:14,width:"100%",cursor:"pointer"}}>{busy?"儲存中…":"儲存轉換歷程"}</button>
  </div>:<div style={{border:"1px dashed #94a3b8",borderRadius:12,padding:32,color:"#475569"}}><h2>個別轉換歷程</h2><p>請從左側新朋友清單選擇一位，查看並編輯他的興趣及轉換進度。</p></div>}
