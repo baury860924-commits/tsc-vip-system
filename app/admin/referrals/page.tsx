@@ -11,7 +11,7 @@ export default function ReferralsAdmin(){
  const [sb,setSb]=useState<SupabaseClient|null>(null),[members,setMembers]=useState<Member[]>([]),[items,setItems]=useState<Referral[]>([]),[leads,setLeads]=useState<Lead[]>([]);
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
- const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤"),[ownerFilter,setOwnerFilter]=useState("全部負責人"),[dueFilter,setDueFilter]=useState("全部日期");
+ const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤"),[ownerFilter,setOwnerFilter]=useState("全部負責人"),[dueFilter,setDueFilter]=useState("全部日期"),[workbench,setWorkbench]=useState(false),[workbenchOwner,setWorkbenchOwner]=useState("");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
  const [channel,setChannel]=useState("咖啡聚會"),[channelFilter,setChannelFilter]=useState("全部類型");
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
@@ -46,6 +46,8 @@ export default function ReferralsAdmin(){
  const followList=scopedLeads.filter(l=>followStage(l)!=="已完成"&&(followFilter==="全部待追蹤"||followStage(l)===followFilter)&&(ownerFilter==="全部負責人"||(ownerFilter==="未指派"?!l.assigned_staff_name:l.assigned_staff_name===ownerFilter))&&(dueFilter==="全部日期"||dueKind(l)===dueFilter)).sort((a,b)=>dueOrder(a)-dueOrder(b)||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999"));
  const owners=["全部負責人","未指派",...Array.from(new Set(scopedLeads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x))))];
  const overdue=scopedLeads.filter(l=>followStage(l)!=="已完成"&&l.next_follow_up_date&&l.next_follow_up_date<today).length;
+ const workbenchRows=leads.filter(l=>followStage(l)!=="已完成"&&Boolean(workbenchOwner)&&l.assigned_staff_name===workbenchOwner).sort((a,b)=>dueOrder(a)-dueOrder(b)||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999"));
+ const staffNames=Array.from(new Set(leads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x)))).sort();
  const followKinds=["全部待追蹤","VIP 已報名待加入","藍海課已報名待加入 VIP","TSC 活動已報名待藍海課","尚未報名 TSC 活動"];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
  return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
@@ -55,6 +57,25 @@ export default function ReferralsAdmin(){
  <select aria-label="選擇會員個別介紹紀錄" style={{...field,width:"auto",marginTop:0}} value={view==="member"?selectedMember:""} onChange={e=>e.target.value?openMember(e.target.value):setView("overview")}>
  <option value="">查看個別會員介紹紀錄</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select>
  </nav>
+ <section style={{padding:18,border:"2px solid #164e63",borderRadius:12,marginBottom:24,background:"#f0f9ff"}}>
+ <button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
+ {workbench&&<div style={{marginTop:18}}>
+ <h2 style={{marginTop:0}}>工作人員待辦工作台</h2>
+ <p>目前依「負責人姓名」篩選，尚未與登入帳號綁定。請先選擇工作人員；此頁僅供已授權的管理員及工作人員使用。</p>
+ <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>setWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+ {workbenchOwner&&<>
+ <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,margin:"16px 0"}}>
+ {["已逾期","今日到期","未排定","未來追蹤"].map(k=><div key={k} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{k}</div><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)===k).length}</strong></div>)}</div>
+ <div style={{display:"grid",gap:10}}>
+ {workbenchRows.map(l=><div key={l.id} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}>
+ <strong>{l.display_name||"未填姓名"}</strong><span style={{marginLeft:10,color:dueKind(l)==="已逾期"?"#b45309":"#475569"}}>{dueKind(l)}{l.next_follow_up_date?"｜"+l.next_follow_up_date:""}</span>
+ <div style={{marginTop:6,fontSize:14}}>{followStage(l)}｜介紹人：{nameOf(l.referrer_member_id)}</div>
+ <div style={{marginTop:10}}><a style={{display:"inline-block",padding:"9px 12px",background:"#164e63",color:"white",borderRadius:8,textDecoration:"none"}} href={"/admin/leads?lead="+encodeURIComponent(l.id)}>開啟檔案／新增聯繫紀錄 →</a></div>
+ </div>)}
+ {workbenchRows.length===0&&<p>這位工作人員目前沒有待追蹤的新朋友。</p>}
+ </div></>}
+ </div>}
+ </section>
  <h2>{view==="overview"?"轉介紹總覽":nameOf(selectedMember)+"｜個別介紹紀錄"}</h2>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
  {metrics(scoped,scopedLeads).map(([label,value])=><div key={label} style={{padding:18,border:"1px solid #cbd5e1",borderRadius:12}}><div>{label}</div><strong style={{fontSize:28}}>{value}</strong></div>)}</div>
