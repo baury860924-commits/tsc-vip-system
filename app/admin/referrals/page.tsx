@@ -17,7 +17,7 @@ export default function ReferralsAdmin(){
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setNotice("Supabase 尚未設定");setLoading(false);return;}
  const client=createClient(url,key);setSb(client);let active=true;
- void(async()=>{try{const {data:{user}}=await client.auth.getUser();if(!user){if(active)setNotice("請先登入");return;}
+ void(async()=>{try{const {data:{session}}=await client.auth.getSession();const user=session?.user;if(!user){if(active)setNotice("請先登入");return;}
  const {data:p}=await client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();
  if(!["admin","staff"].includes(p?.role||"")){if(active)setNotice("僅限管理員及工作人員");return;}
  const [m,r,l]=await Promise.all([client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referrals").select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").order("created_at",{ascending:false}).limit(300),client.from("vip_referral_leads").select("*").limit(500)]);
