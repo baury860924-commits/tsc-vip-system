@@ -11,7 +11,7 @@ export default function InviteAuthBridge(){
  if(query.has("token_hash")){const type=query.get("type");const token_hash=query.get("token_hash")!;const {error}=await sb.auth.verifyOtp({token_hash,type:type==="invite"?"invite":"magiclink"});if(error)throw error;}
  else if(query.has("code")){const {error}=await sb.auth.exchangeCodeForSession(query.get("code")!);if(error)throw error;}
  const {data,error}=await sb.auth.getSession();if(error||!data.session)throw Error("尚未建立登入狀態，請回到登入頁使用 Email 驗證信登入");
- if(!cancelled)window.location.replace("/account");
+ if(!cancelled)window.location.replace("/auth/landing");
  }catch(e){if(!cancelled)setStatus(e instanceof Error?e.message:"驗證失敗，請回到登入頁重新登入");}})();return()=>{cancelled=true;};
  },[]);
  return status?<div role="status" style={{padding:16,margin:16,background:"#ecfeff",border:"1px solid #67e8f9",borderRadius:10}}>{status}　<a href="/login">登入頁</a></div>:null;
