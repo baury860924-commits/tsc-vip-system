@@ -26,7 +26,7 @@ export default function LoginPage(){
     else setMessage("登入失敗（"+(code||"驗證錯誤")+"），請檢查 Supabase Authentication 設定。");
     return;
    }
-   if(mode==="email"){setMessage("登入驗證信已寄出，請到 Gmail 點擊連結。若未收到，請查看垃圾郵件。");return;}window.location.assign("/account");
+   if(mode==="email"){setMessage("登入驗證信已寄出，請到 Gmail 點擊連結。若未收到，請查看垃圾郵件。");return;}window.location.assign("/auth/landing");
   }catch{setMessage("登入服務暫時無法連線。");}
   finally{setBusy(false);}
  }
