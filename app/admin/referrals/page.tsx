@@ -13,6 +13,7 @@ export default function ReferralsAdmin(){
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
  const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤"),[ownerFilter,setOwnerFilter]=useState("全部負責人"),[dueFilter,setDueFilter]=useState("全部日期"),[workbench,setWorkbench]=useState(false),[workbenchOwner,setWorkbenchOwner]=useState("");
  const [authStaffName,setAuthStaffName]=useState("");
+ const [workbenchDueFilter,setWorkbenchDueFilter]=useState("全部"),[workbenchSearch,setWorkbenchSearch]=useState("");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
  const [channel,setChannel]=useState("咖啡聚會"),[channelFilter,setChannelFilter]=useState("全部類型");
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
@@ -53,6 +54,7 @@ export default function ReferralsAdmin(){
  const owners=["全部負責人","未指派",...Array.from(new Set(scopedLeads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x))))];
  const overdue=scopedLeads.filter(l=>followStage(l)!=="已完成"&&l.next_follow_up_date&&l.next_follow_up_date<today).length;
  const workbenchRows=leads.filter(l=>followStage(l)!=="已完成"&&Boolean(workbenchOwner)&&l.assigned_staff_name===workbenchOwner).sort((a,b)=>dueOrder(a)-dueOrder(b)||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999"));
+ const visibleWorkbenchRows=workbenchRows.filter(l=>(workbenchDueFilter==="全部"||dueKind(l)===workbenchDueFilter)&&(l.display_name||"").toLocaleLowerCase().includes(workbenchSearch.trim().toLocaleLowerCase()));
  const staffNames=Array.from(new Set(leads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x)))).sort();
  const followKinds=["全部待追蹤","VIP 已報名待加入","藍海課已報名待加入 VIP","TSC 活動已報名待藍海課","尚未報名 TSC 活動"];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
@@ -67,19 +69,22 @@ export default function ReferralsAdmin(){
  <a href="/admin/staff" style={{display:"inline-block",margin:"0 12px 12px 0"}}>工作人員管理 →</a><button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
  {workbench&&<div style={{marginTop:18}}>
  <h2 style={{marginTop:0}}>工作人員待辦工作台</h2><p><a href="/admin/staff">→ 工作人員名錄與帳號綁定</a></p>{authStaffName&&<p style={{fontWeight:700,color:"#047857"}}>已依登入帳號辨識：{authStaffName}。你仍可切換檢視其他負責人的待辦。</p>}
- <p>目前依「負責人姓名」篩選，尚未與登入帳號綁定。選擇一次後，此裝置會記住上次選擇（並非身分驗證或帳號權限設定）。</p>
+ <p>已綁定帳號者會自動帶入負責人；未綁定時可手動選擇。切換負責人僅為檢視篩選，不會變更登入權限。</p>
  <button type="button" onClick={()=>{setWorkbench(true);setView("overview");}} style={{marginBottom:12,marginRight:10,padding:"10px 14px",border:"1px solid #164e63",borderRadius:8,background:"white",color:"#164e63"}}>重新整理待辦請重開此頁</button>
  <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>chooseWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
  {workbenchOwner&&<>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,margin:"16px 0"}}>
  {["已逾期","今日到期","未排定","未來追蹤"].map(k=><div key={k} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{k}</div><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)===k).length}</strong></div>)}</div>
+ <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{["全部","已逾期","今日到期","未排定","未來追蹤"].map(k=><button type="button" key={k} onClick={()=>setWorkbenchDueFilter(k)} aria-pressed={workbenchDueFilter===k} style={{padding:"10px 12px",borderRadius:9,border:"1px solid #cbd5e1",background:workbenchDueFilter===k?"#164e63":"white",color:workbenchDueFilter===k?"white":"#0f172a"}}>{k}（{k==="全部"?workbenchRows.length:workbenchRows.filter(l=>dueKind(l)===k).length}）</button>)}</div>
+ <label style={{display:"block",marginBottom:12}}>搜尋新朋友<input type="search" value={workbenchSearch} onChange={e=>setWorkbenchSearch(e.target.value)} placeholder="輸入姓名快速尋找" style={{...field,maxWidth:460}}/></label>
+ <p style={{fontSize:14,color:"#475569"}}>目前顯示 {visibleWorkbenchRows.length} 筆，依逾期、今日、未排定、未來日期排序。更新聯繫紀錄後重新整理即可同步。</p>
  <div style={{display:"grid",gap:10}}>
- {workbenchRows.map(l=><div key={l.id} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}>
+ {visibleWorkbenchRows.map(l=><div key={l.id} style={{background:"white",border:"1px solid #cbd5e1",borderRadius:10,padding:14}}>
  <strong>{l.display_name||"未填姓名"}</strong><span style={{marginLeft:10,color:dueKind(l)==="已逾期"?"#b45309":"#475569"}}>{dueKind(l)}{l.next_follow_up_date?"｜"+l.next_follow_up_date:""}</span>
  <div style={{marginTop:6,fontSize:14}}>{followStage(l)}｜介紹人：{nameOf(l.referrer_member_id)}</div>
  <div style={{marginTop:10}}><a style={{display:"inline-block",padding:"9px 12px",background:"#164e63",color:"white",borderRadius:8,textDecoration:"none"}} href={"/admin/leads?lead="+encodeURIComponent(l.id)}>開啟檔案／新增聯繫紀錄 →</a></div>
  </div>)}
- {workbenchRows.length===0&&<p>這位工作人員目前沒有待追蹤的新朋友。</p>}
+ {visibleWorkbenchRows.length===0&&<p>目前沒有符合條件的待追蹤新朋友。</p>}
  </div></>}
  </div>}
  </section>
