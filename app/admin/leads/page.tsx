@@ -17,6 +17,8 @@ export default function LeadManagement(){
  const [m,l]=await Promise.all([client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referral_leads").select("*").order("first_referred_at",{ascending:false}).limit(500)]);
  if(!active)return;if(m.error||l.error){setNotice("請先執行被介紹者檔案 SQL："+(l.error?.message||m.error?.message));return;}
  setMembers(m.data||[]);setLeads(l.data||[]);setReady(true);
+ const linkedId=new URLSearchParams(window.location.search).get("lead");const linked=(l.data||[]).find(x=>x.id===linkedId);
+ if(linked){setSelected(linked.id);setCoffee(linked.interest_coffee);setPositioning(linked.interest_positioning);setVip(linked.interest_vip);setCoffeeStage(linked.coffee_stage);setPositioningStage(linked.positioning_stage);setVipStage(linked.vip_stage);setNotes(linked.notes||"");}
  }catch{if(active)setNotice("連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  const memberName=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function add(e:React.FormEvent){e.preventDefault();if(!sb||!member||!name.trim()||busy)return;setBusy(true);setNotice("");
