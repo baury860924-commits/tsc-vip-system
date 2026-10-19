@@ -12,6 +12,7 @@ export default function ReferralsAdmin(){
  const [ready,setReady]=useState(false),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
  const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤"),[ownerFilter,setOwnerFilter]=useState("全部負責人"),[dueFilter,setDueFilter]=useState("全部日期"),[workbench,setWorkbench]=useState(false),[workbenchOwner,setWorkbenchOwner]=useState("");
+ const [authStaffName,setAuthStaffName]=useState("");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
  const [channel,setChannel]=useState("咖啡聚會"),[channelFilter,setChannelFilter]=useState("全部類型");
  const [editing,setEditing]=useState<string|null>(null),[status,setStatus]=useState("已介紹"),[follow,setFollow]=useState(""),[note,setNote]=useState(""),[filter,setFilter]=useState("全部");
@@ -22,6 +23,9 @@ export default function ReferralsAdmin(){
  const p=profile.data;if(!["admin","staff"].includes(p?.role||"")){if(active)setNotice("僅限管理員及工作人員");return;}
  if(!active)return;if(m.error||r.error||l.error){setNotice("讀取失敗，請先執行轉介紹資料表 SQL："+(r.error?.message||l.error?.message||m.error?.message));return;}
  setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
+ const {data:directory}=await client.from("tsc_staff_directory").select("display_name,user_id,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
+ if(active&&directory?.display_name){setAuthStaffName(directory.display_name);setWorkbenchOwner(directory.display_name);setWorkbench(true);}
+
  }catch{if(active)setNotice("資料庫連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  useEffect(()=>{try{const saved=window.localStorage.getItem("tsc_workbench_owner");if(saved)setWorkbenchOwner(saved);}catch{}},[]);
  const chooseWorkbenchOwner=(value:string)=>{setWorkbenchOwner(value);try{if(value)window.localStorage.setItem("tsc_workbench_owner",value);else window.localStorage.removeItem("tsc_workbench_owner");}catch{}};
@@ -60,9 +64,9 @@ export default function ReferralsAdmin(){
  <option value="">查看個別會員介紹紀錄</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select>
  </nav>
  <section style={{padding:18,border:"2px solid #164e63",borderRadius:12,marginBottom:24,background:"#f0f9ff"}}>
- <button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
+ <a href="/admin/staff" style={{display:"inline-block",margin:"0 12px 12px 0"}}>工作人員管理 →</a><button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
  {workbench&&<div style={{marginTop:18}}>
- <h2 style={{marginTop:0}}>工作人員待辦工作台</h2>
+ <h2 style={{marginTop:0}}>工作人員待辦工作台</h2><p><a href="/admin/staff">→ 工作人員名錄與帳號綁定</a></p>{authStaffName&&<p style={{fontWeight:700,color:"#047857"}}>已依登入帳號辨識：{authStaffName}。你仍可切換檢視其他負責人的待辦。</p>}
  <p>目前依「負責人姓名」篩選，尚未與登入帳號綁定。選擇一次後，此裝置會記住上次選擇（並非身分驗證或帳號權限設定）。</p>
  <button type="button" onClick={()=>{setWorkbench(true);setView("overview");}} style={{marginBottom:12,marginRight:10,padding:"10px 14px",border:"1px solid #164e63",borderRadius:8,background:"white",color:"#164e63"}}>重新整理待辦請重開此頁</button>
  <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>chooseWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
