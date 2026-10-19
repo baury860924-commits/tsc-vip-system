@@ -1,0 +1,1 @@
+export default function Loading(){return <main style={{padding:24,fontFamily:'system-ui'}}><h1>TSC VIP 管理系統</h1><p>頁面載入中，請稍候…</p></main>}
