@@ -4,7 +4,7 @@ import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 type Member={id:string;name:string;vip_number:string|null};
 type Lead={id:string;referrer_member_id:string;lead_code:string;display_name:string;coffee_stage:string;positioning_stage:string;vip_stage:string};
 type Referral={id:string;lead_id:string|null;referrer_member_id:string;recipient_member_id:string|null;referral_type:string;referral_date:string;lead_label:string;summary:string;status:string;follow_up_date:string|null;internal_note:string;created_at:string};
-const channels=["咖啡聚會","藍海定位一日課","VIP 陪跑","VIP 互相轉介紹"];
+const channels=["TSC 活動","藍海定位一日課","VIP 陪跑","VIP 互相轉介紹"];
 const statuses=["已介紹","已聯繫","洽談中","已成交","未成交"];
 const field={width:"100%",boxSizing:"border-box" as const,padding:12,border:"1px solid #cbd5e1",borderRadius:9,marginTop:5};
 export default function ReferralsAdmin(){
@@ -27,17 +27,18 @@ export default function ReferralsAdmin(){
  const nameOf=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
  async function create(e:React.FormEvent){e.preventDefault();if(!sb||!ready||!referrer||!date||(channel==="VIP 互相轉介紹"&&(!recipient||referrer===recipient)))return;
  setBusy(true);setNotice("");
- const {data,error}=await sb.from("vip_referrals").insert({referrer_member_id:referrer,lead_id:leadId||null,recipient_member_id:channel==="VIP 互相轉介紹"?recipient:null,referral_type:channel,referral_date:date,lead_label:lead.trim(),summary:summary.trim()}).select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
+ const {data,error}=await sb.from("vip_referrals").insert({referrer_member_id:referrer,lead_id:leadId||null,recipient_member_id:channel==="VIP 互相轉介紹"?recipient:null,referral_type:channel==="TSC 活動"?"咖啡聚會":channel,referral_date:date,lead_label:lead.trim(),summary:summary.trim()}).select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("新增失敗："+error.message);else if(data){setItems(old=>[data,...old]);setLead("");setLeadId("");setSummary("");setNotice("已建立轉介紹紀錄");}setBusy(false);}
  function begin(r:Referral){setEditing(r.id);setLinkLeadId(r.lead_id||"");setStatus(r.status);setFollow(r.follow_up_date||"");setNote(r.internal_note||"");}
  async function update(id:string){if(!sb||!ready)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referrals").update({status,lead_id:linkLeadId||null,follow_up_date:follow||null,internal_note:note,updated_at:new Date().toISOString()}).eq("id",id).select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setItems(old=>old.map(x=>x.id===id?data:x));setEditing(null);setNotice("已更新轉介紹進度");}setBusy(false);}
  const scoped=items.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
- const visible=scoped.filter(x=>(filter==="全部"||x.status===filter)&&(channelFilter==="全部類型"||x.referral_type===channelFilter));
+ const scopedLeads=leads.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
+ const visible=scoped.filter(x=>(filter==="全部"||x.status===filter)&&(channelFilter==="全部類型"||x.referral_type===(channelFilter==="TSC 活動"?"咖啡聚會":channelFilter)));
  const personCount=(rows:Referral[])=>new Set(rows.map(x=>x.lead_id||("legacy:"+x.referrer_member_id+":"+x.lead_label.trim().toLocaleLowerCase())).filter(x=>!x.endsWith(":"))).size;
- const ranked=members.map(m=>({member:m,rows:items.filter(x=>x.referrer_member_id===m.id)})).sort((a,b)=>b.rows.length-a.rows.length);
- const metrics=(rows:Referral[])=>[["介紹案件",rows.length],["已記錄對象",personCount(rows)],["洽談中",rows.filter(x=>x.status==="洽談中").length],["已成交",rows.filter(x=>x.status==="已成交").length]];
+ const ranked=members.map(m=>({member:m,rows:items.filter(x=>x.referrer_member_id===m.id),friends:leads.filter(x=>x.referrer_member_id===m.id)})).sort((a,b)=>b.friends.length-a.friends.length);
+ const metrics=(rows:Referral[],friends:Lead[])=>[["介紹新朋友",friends.length],["TSC 活動已報名",friends.filter(x=>x.coffee_stage==="已報名").length],["藍海定位課已報名",friends.filter(x=>x.positioning_stage==="已報名").length],["VIP 已加入",friends.filter(x=>x.vip_stage==="已加入").length],["介紹案件",rows.length]];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
  return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
  {loading?<p>正在讀取…</p>:ready?<>
@@ -48,11 +49,11 @@ export default function ReferralsAdmin(){
  </nav>
  <h2>{view==="overview"?"轉介紹總覽":nameOf(selectedMember)+"｜個別介紹紀錄"}</h2>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
- {metrics(scoped).map(([label,value])=><div key={label} style={{padding:18,border:"1px solid #cbd5e1",borderRadius:12}}><div>{label}</div><strong style={{fontSize:28}}>{value}</strong></div>)}</div>
- <p style={{color:"#475569"}}>「介紹案件」計算每筆介紹；「已記錄對象」優先以新朋友檔案去重；尚未關聯的舊案件暫依介紹人與案件代稱估算。</p>
+ {metrics(scoped,scopedLeads).map(([label,value])=><div key={label} style={{padding:18,border:"1px solid #cbd5e1",borderRadius:12}}><div>{label}</div><strong style={{fontSize:28}}>{value}</strong></div>)}</div>
+ <p style={{color:"#475569"}}>新朋友人數與三階段實績以「新朋友檔案」為準：TSC 活動及藍海定位課計算已報名，VIP 計算已加入。介紹案件另行統計，不與新朋友人數相加。</p>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
- {channels.map(c=><div key={c} style={{border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{c}</div><strong style={{fontSize:24}}>{scoped.filter(x=>x.referral_type===c).length}</strong><div style={{fontSize:13}}>筆介紹案件</div></div>)}</div>
- {view==="overview"&&<section style={{marginBottom:28}}><h2>會員介紹排行榜</h2><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["會員","介紹案件","已記錄對象","咖啡聚會","藍海一日課","VIP 陪跑","會員互介","已成交","詳細"].map(h=><th key={h} style={{padding:10,textAlign:"left",borderBottom:"1px solid #cbd5e1"}}>{h}</th>)}</tr></thead><tbody>{ranked.map(({member:m,rows})=><tr key={m.id}><td style={{padding:10,borderBottom:"1px solid #e2e8f0"}}>{nameOf(m.id)}</td><td>{rows.length}</td><td>{personCount(rows)}</td>{channels.map(c=><td key={c}>{rows.filter(x=>x.referral_type===c).length}</td>)}<td>{rows.filter(x=>x.status==="已成交").length}</td><td><button onClick={()=>openMember(m.id)}>查看</button></td></tr>)}</tbody></table></div></section>}
+ {channels.map(c=><div key={c} style={{border:"1px solid #cbd5e1",borderRadius:10,padding:14}}><div>{c}</div><strong style={{fontSize:24}}>{c==="TSC 活動"?scopedLeads.filter(x=>x.coffee_stage==="已報名").length:c==="藍海定位一日課"?scopedLeads.filter(x=>x.positioning_stage==="已報名").length:c==="VIP 陪跑"?scopedLeads.filter(x=>x.vip_stage==="已加入").length:scoped.filter(x=>x.referral_type===c).length}</strong><div style={{fontSize:13}}>{c==="VIP 互相轉介紹"?"筆介紹案件":c==="VIP 陪跑"?"位已加入":"位已報名"}</div></div>)}</div>
+ {view==="overview"&&<section style={{marginBottom:28}}><h2>會員介紹排行榜</h2><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["會員","新朋友人數","TSC 活動已報名","藍海課已報名","VIP 已加入","互相轉介紹案件","詳細"].map(h=><th key={h} style={{padding:10,textAlign:"left",borderBottom:"1px solid #cbd5e1"}}>{h}</th>)}</tr></thead><tbody>{ranked.map(({member:m,rows,friends})=><tr key={m.id}><td style={{padding:10,borderBottom:"1px solid #e2e8f0"}}>{nameOf(m.id)}</td><td>{friends.length}</td><td>{friends.filter(x=>x.coffee_stage==="已報名").length}</td><td>{friends.filter(x=>x.positioning_stage==="已報名").length}</td><td>{friends.filter(x=>x.vip_stage==="已加入").length}</td><td>{rows.filter(x=>x.referral_type==="VIP 互相轉介紹").length}</td><td><button onClick={()=>openMember(m.id)}>查看</button></td></tr>)}</tbody></table></div></section>}
  <section style={{border:"1px solid #cbd5e1",padding:20,borderRadius:12,marginBottom:24}}><h2>新增轉介紹紀錄</h2><form onSubmit={create} style={{display:"grid",gap:14}}>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:14}}>
  <label>介紹人 VIP *<select required style={field} value={referrer} onChange={e=>{setReferrer(e.target.value);setLeadId("");}}><option value="">請選擇介紹人</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select></label>
