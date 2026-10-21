@@ -58,7 +58,7 @@ export default function CoachingPage(){
  },[]);
  async function chooseMember(id:string){
   setSelected(id);if(id)window.setTimeout(()=>document.getElementById("coaching-editor")?.scrollIntoView({behavior:"smooth",block:"start"}),100);setRecords([]);setNotice("");
-  if(!client||!id)return;
+  if(!client||!id)return;if(accountRole==="staff"&&!myMemberIds.includes(id)){setNotice("此 VIP 尚未指派給你，無法編輯陪跑紀錄。");setSelected("");return;}
   setBusy(true);
   const {data,error}=await client.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",id).order("contact_date",{ascending:false}).limit(100);
   if(error)setNotice(["42P01","PGRST205"].includes(error.code||"")?"尚未建立陪跑資料表，請先執行 SQL。":"讀取陪跑紀錄失敗："+(error.code||"權限錯誤"));
@@ -66,7 +66,7 @@ export default function CoachingPage(){
   setBusy(false);
  }
  async function save(e:React.FormEvent){
-  e.preventDefault();if(!client||!authorized||!selected)return;
+  e.preventDefault();if(!client||!authorized||!selected||(accountRole==="staff"&&!myMemberIds.includes(selected)))return;
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
   if(error)setNotice("儲存失敗："+(["42P01","PGRST205"].includes(error.code||"")?"陪跑資料表尚未建立，請先執行 SQL 設定":error.code||"權限錯誤"));
@@ -74,10 +74,10 @@ export default function CoachingPage(){
   setBusy(false);
  }
  const memberState=(id:string)=>monthlyRecords.some(r=>r.member_id===id&&r.invitation_sent)?(monthlyRecords.some(r=>r.member_id===id&&r.member_replied)?"已回覆":"已邀約待回覆"):"尚未邀約";
- const monthlyVisible=members.filter(m=>(ownerFilter==="全部"||(ownerFilter==="我負責"&&myMemberIds.includes(m.id))||(ownerFilter==="其他會員"&&!myMemberIds.includes(m.id)))&&(monthlyFilter==="全部"||memberState(m.id)===monthlyFilter)&&(m.name+" "+(m.vip_number||"")+" "+m.company).toLocaleLowerCase().includes(memberSearch.trim().toLocaleLowerCase()));
+ const monthlyVisible=members.filter(m=>(accountRole!=="staff"||myMemberIds.includes(m.id))&&(ownerFilter==="全部"||(ownerFilter==="我負責"&&myMemberIds.includes(m.id))||(ownerFilter==="其他會員"&&!myMemberIds.includes(m.id)))&&(monthlyFilter==="全部"||memberState(m.id)===monthlyFilter)&&(m.name+" "+(m.vip_number||"")+" "+m.company).toLocaleLowerCase().includes(memberSearch.trim().toLocaleLowerCase()));
  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
  const latestTasks=followUps.reduce((map,r)=>{if(!map.has(r.member_id))map.set(r.member_id,r);return map;},new Map<string,typeof followUps[number]>());
- const taskRows=Array.from(latestTasks.values()).filter(r=>r.follow_up_date&&r.next_action?.trim()&&members.some(m=>m.id===r.member_id)&&(ownerFilter!=="我負責"||myMemberIds.includes(r.member_id))&&(ownerFilter!=="其他會員"||!myMemberIds.includes(r.member_id))).sort((a,b)=>(a.follow_up_date||"").localeCompare(b.follow_up_date||""));
+ const taskRows=Array.from(latestTasks.values()).filter(r=>r.follow_up_date&&r.next_action?.trim()&&(accountRole!=="staff"||myMemberIds.includes(r.member_id))&&members.some(m=>m.id===r.member_id)&&(ownerFilter!=="我負責"||myMemberIds.includes(r.member_id))&&(ownerFilter!=="其他會員"||!myMemberIds.includes(r.member_id))).sort((a,b)=>(a.follow_up_date||"").localeCompare(b.follow_up_date||""));
  const taskVisible=taskRows.filter(r=>followUpFilter==="全部"||(followUpFilter==="今天與逾期"&&(r.follow_up_date||"")<=today)||(followUpFilter==="未來"&&(r.follow_up_date||"")>today));
  const inputStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
  return <main style={{maxWidth:900,margin:"32px auto",padding:20,fontFamily:"system-ui,sans-serif"}}>
