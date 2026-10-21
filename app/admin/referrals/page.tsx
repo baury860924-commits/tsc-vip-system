@@ -61,13 +61,13 @@ export default function ReferralsAdmin(){
  const staffNames=accountRole==="staff"?[authStaffName].filter(Boolean):Array.from(new Set(leads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x)))).sort();
  const followKinds=["全部待追蹤","VIP 已報名待加入","藍海課已報名待加入 VIP","TSC 活動已報名待藍海課","尚未報名 TSC 活動"];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
- return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
+ return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>{accountRole==="staff"?"僅顯示你負責的新朋友追蹤工作台。":"管理會員間的資源媒合與成交進度。"}請勿輸入被介紹者的身分證或其他敏感資料。</p>
  {loading?<p>正在讀取…</p>:ready?<>
- <nav style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
+ {accountRole==="admin"&&<nav style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
  <button onClick={()=>{setView("overview");setSelectedMember("");}} style={{padding:12,background:view==="overview"?"#164e63":"#e2e8f0",color:view==="overview"?"white":"#0f172a",border:0,borderRadius:8}}>介紹總覽</button>
  <select aria-label="選擇會員個別介紹紀錄" style={{...field,width:"auto",marginTop:0}} value={view==="member"?selectedMember:""} onChange={e=>e.target.value?openMember(e.target.value):setView("overview")}>
  <option value="">查看個別會員介紹紀錄</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select>
- </nav>
+ </nav>}
  <section id="my-workbench" style={{padding:18,border:"2px solid #164e63",borderRadius:12,marginBottom:24,background:"#f0f9ff"}}>
  <a href="/admin/referrals?workbench=1" style={{display:"inline-block",margin:"0 12px 12px 0",fontWeight:700}}>📱 前往我的每日追蹤 →</a><a href="/admin/staff" style={{display:"inline-block",margin:"0 12px 12px 0"}}>工作人員管理 →</a><button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
  {workbench&&<div style={{marginTop:18}}>
@@ -91,7 +91,7 @@ export default function ReferralsAdmin(){
  </div></>}
  </div>}
  </section>
- <h2>{view==="overview"?"轉介紹總覽":nameOf(selectedMember)+"｜個別介紹紀錄"}</h2>
+ {accountRole==="admin"&&<><h2>{view==="overview"?"轉介紹總覽":nameOf(selectedMember)+"｜個別介紹紀錄"}</h2>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:24}}>
  {metrics(scoped,scopedLeads).map(([label,value])=><div key={label} style={{padding:18,border:"1px solid #cbd5e1",borderRadius:12}}><div>{label}</div><strong style={{fontSize:28}}>{value}</strong></div>)}</div>
  <p style={{color:"#475569"}}>新朋友人數與三階段實績以「新朋友檔案」為準：TSC 活動及藍海定位課計算已報名，VIP 計算已加入。介紹案件另行統計，不與新朋友人數相加。</p>
@@ -140,5 +140,6 @@ export default function ReferralsAdmin(){
  <strong>{nameOf(r.referrer_member_id)} → {r.referral_type==="VIP 互相轉介紹"&&r.recipient_member_id?nameOf(r.recipient_member_id):r.referral_type}</strong><p>{r.referral_date}｜{r.lead_label||"未命名案件"}｜<strong>{r.status}</strong></p>{r.lead_id&&<p>新朋友：{leads.find(l=>l.id===r.lead_id)?.display_name||leads.find(l=>l.id===r.lead_id)?.lead_code||"已關聯檔案"}</p>}{r.summary&&<p style={{whiteSpace:"pre-wrap"}}>{r.summary}</p>}{r.follow_up_date&&<p>下次追蹤：{r.follow_up_date}</p>}
  {editing===r.id?<div style={{display:"grid",gap:12}}><label>關聯新朋友檔案<select style={field} value={linkLeadId} onChange={e=>setLinkLeadId(e.target.value)}><option value="">不關聯</option>{leads.filter(l=>l.referrer_member_id===r.referrer_member_id).map(l=><option key={l.id} value={l.id}>{l.display_name||l.lead_code}（{l.lead_code}）</option>)}</select></label><label>進度<select style={field} value={status} onChange={e=>setStatus(e.target.value)}>{statuses.map(x=><option key={x}>{x}</option>)}</select></label><label>追蹤日期<input type="date" style={field} value={follow} onChange={e=>setFollow(e.target.value)}/></label><label>內部備註<textarea rows={3} style={field} value={note} onChange={e=>setNote(e.target.value)}/></label><div><button disabled={busy} onClick={()=>void update(r.id)} style={{padding:10}}>儲存進度</button> <button onClick={()=>setEditing(null)} style={{padding:10}}>取消</button></div></div>:<button onClick={()=>begin(r)} style={{padding:10}}>更新進度</button>}
  </article>)}
+ </>}
  </>:<p>轉介紹功能尚未啟用。</p>}{notice&&<p role="status">{notice}</p>}</main>;
 }
