@@ -66,12 +66,12 @@ export default function ReferralsAdmin(){
  <select aria-label="選擇會員個別介紹紀錄" style={{...field,width:"auto",marginTop:0}} value={view==="member"?selectedMember:""} onChange={e=>e.target.value?openMember(e.target.value):setView("overview")}>
  <option value="">查看個別會員介紹紀錄</option>{members.map(m=><option key={m.id} value={m.id}>{nameOf(m.id)}</option>)}</select>
  </nav>
- <section style={{padding:18,border:"2px solid #164e63",borderRadius:12,marginBottom:24,background:"#f0f9ff"}}>
+ <section id="my-workbench" style={{padding:18,border:"2px solid #164e63",borderRadius:12,marginBottom:24,background:"#f0f9ff"}}>
  <a href="/admin/staff" style={{display:"inline-block",margin:"0 12px 12px 0"}}>工作人員管理 →</a><button type="button" onClick={()=>setWorkbench(v=>!v)} style={{background:"#164e63",color:"white",padding:"12px 18px",border:0,borderRadius:9,fontSize:17}}>{workbench?"收合工作人員待辦":"開啟工作人員待辦工作台 →"}</button>
  {workbench&&<div style={{marginTop:18}}>
- <h2 style={{marginTop:0}}>工作人員待辦工作台</h2>{personalOnly&&<p style={{color:"#047857",fontWeight:700}}>已進入你的個人工作台。以下優先顯示你負責的案件。</p>}<p><a href="/admin/staff">→ 工作人員名錄與帳號綁定</a></p>{authStaffName&&<p style={{fontWeight:700,color:"#047857"}}>已依登入帳號辨識：{authStaffName}。你仍可切換檢視其他負責人的待辦。</p>}
+ <h2 style={{marginTop:0}}>工作人員待辦工作台</h2>{workbenchOwner&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,margin:"12px 0 20px"}}><div style={{background:"#fff",borderRadius:10,padding:14,border:"1px solid #e2e8f0"}}><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)==="今日到期").length}</strong><div>今天要聯繫</div></div><div style={{background:"#fff7ed",borderRadius:10,padding:14,border:"1px solid #fdba74"}}><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)==="已逾期").length}</strong><div>逾期未追蹤</div></div><div style={{background:"#fff",borderRadius:10,padding:14,border:"1px solid #e2e8f0"}}><strong style={{fontSize:26}}>{workbenchRows.filter(l=>dueKind(l)==="未排定").length}</strong><div>尚未排定</div></div></div>}{personalOnly&&<p style={{color:"#047857",fontWeight:700}}>已進入你的個人工作台。以下優先顯示你負責的案件。</p>}<p><a href="/admin/staff">→ 工作人員名錄與帳號綁定</a></p>{authStaffName&&<p style={{fontWeight:700,color:"#047857"}}>已依登入帳號辨識：{authStaffName}。你仍可切換檢視其他負責人的待辦。</p>}
  <p>已綁定帳號者會自動帶入負責人；未綁定時可手動選擇。切換負責人僅為檢視篩選，不會變更登入權限。</p>
- <button type="button" onClick={()=>{setWorkbench(true);setView("overview");}} style={{marginBottom:12,marginRight:10,padding:"10px 14px",border:"1px solid #164e63",borderRadius:8,background:"white",color:"#164e63"}}>重新整理待辦請重開此頁</button>
+ <button type="button" onClick={()=>window.location.reload()} style={{marginBottom:12,marginRight:10,padding:"10px 14px",border:"1px solid #164e63",borderRadius:8,background:"white",color:"#164e63"}}>重新整理最新待辦</button>
  <label>選擇追蹤負責人<select style={{...field,maxWidth:420}} value={workbenchOwner} onChange={e=>chooseWorkbenchOwner(e.target.value)}><option value="">請選擇負責人</option>{staffNames.map(x=><option key={x} value={x}>{x}</option>)}</select></label>
  {workbenchOwner&&<>
  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,margin:"16px 0"}}>
