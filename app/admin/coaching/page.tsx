@@ -8,7 +8,7 @@ export default function CoachingPage(){
  const [members,setMembers]=useState<Member[]>([]);
  const [selected,setSelected]=useState("");
  const [records,setRecords]=useState<RecordRow[]>([]);
- const [followUps,setFollowUps]=useState<Pick<RecordRow,"id"|"member_id"|"follow_up_date"|"next_action"|"contact_date">[]>([]);
+ const [followUps,setFollowUps]=useState<Pick<RecordRow,"id"|"member_id"|"follow_up_date"|"next_action"|"contact_date"|"created_at">[]>([]);
  const [followUpError,setFollowUpError]=useState("");
  const [followUpFilter,setFollowUpFilter]=useState("今天與逾期");
  const [monthlyRecords,setMonthlyRecords]=useState<Pick<RecordRow,"member_id"|"contact_date"|"invitation_sent"|"member_replied">[]>([]);
@@ -46,7 +46,7 @@ export default function CoachingPage(){
     if(active){setAuthorized(true);if(error)setNotice("無法讀取會員名單："+(error.code||"權限錯誤"));else{setMembers(data||[]);const linked=new URLSearchParams(window.location.search).get("member");if(linked&&(data||[]).some(m=>m.id===linked)){setSelected(linked);const history=await sb.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",linked).order("contact_date",{ascending:false}).limit(100);if(active){if(history.error)setNotice("讀取會員歷程失敗："+history.error.code);else setRecords(history.data||[]);}}}}
     const {data:assigned,error:assignmentError}=await sb.from("vip_staff_assignments").select("member_id").eq("staff_user_id",user.id).is("ended_at",null);
     if(active){if(assignmentError){setAssignmentWarning("工作人員分派資料尚無法讀取，暫時無法依負責人篩選。");setOwnerFilter("全部");}else setMyMemberIds((assigned||[]).map(a=>a.member_id));}
-    const {data:tasks,error:taskError}=await sb.from("vip_coaching_records").select("id,member_id,follow_up_date,next_action,contact_date").order("contact_date",{ascending:false}).order("id",{ascending:false}).limit(2000);
+    const {data:tasks,error:taskError}=await sb.from("vip_coaching_records").select("id,member_id,follow_up_date,next_action,contact_date,created_at").order("contact_date",{ascending:false}).order("created_at",{ascending:false}).limit(2000);
     if(active){if(taskError)setFollowUpError("待追蹤事項讀取失敗，請檢查資料庫權限。");else setFollowUps(tasks||[]);}
     const currentMonth=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);const first=currentMonth+"-01";const nextMonth=new Date(currentMonth+"-15T12:00:00+08:00");nextMonth.setMonth(nextMonth.getMonth()+1);const next=nextMonth.getFullYear()+"-"+String(nextMonth.getMonth()+1).padStart(2,"0")+"-01";
     const {data:monthly,error:monthlyError}=await sb.from("vip_coaching_records").select("member_id,contact_date,invitation_sent,member_replied").gte("contact_date",first).lt("contact_date",next).limit(5000);
@@ -70,7 +70,7 @@ export default function CoachingPage(){
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
   if(error)setNotice("儲存失敗："+(["42P01","PGRST205"].includes(error.code||"")?"陪跑資料表尚未建立，請先執行 SQL 設定":error.code||"權限錯誤"));
-  else if(data){setRecords(old=>[data,...old]);setFollowUps(old=>[{id:data.id,member_id:data.member_id,contact_date:data.contact_date,next_action:data.next_action,follow_up_date:data.follow_up_date},...old]);const month=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
+  else if(data){setRecords(old=>[data,...old]);setFollowUps(old=>[{id:data.id,member_id:data.member_id,contact_date:data.contact_date,next_action:data.next_action,follow_up_date:data.follow_up_date,created_at:data.created_at},...old]);const month=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
   setBusy(false);
  }
  const memberState=(id:string)=>monthlyRecords.some(r=>r.member_id===id&&r.invitation_sent)?(monthlyRecords.some(r=>r.member_id===id&&r.member_replied)?"已回覆":"已邀約待回覆"):"尚未邀約";
