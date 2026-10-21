@@ -70,7 +70,7 @@ export default function CoachingPage(){
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
   if(error)setNotice("儲存失敗："+(["42P01","PGRST205"].includes(error.code||"")?"陪跑資料表尚未建立，請先執行 SQL 設定":error.code||"權限錯誤"));
-  else if(data){setRecords(old=>[data,...old]);const month=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
+  else if(data){setRecords(old=>[data,...old]);setFollowUps(old=>[{id:data.id,member_id:data.member_id,contact_date:data.contact_date,next_action:data.next_action,follow_up_date:data.follow_up_date},...old]);const month=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}).slice(0,7);if(data.contact_date.startsWith(month))setMonthlyRecords(old=>[data,...old]);setSummary("");setNextAction("");setInvited(false);setReplied(false);setFollowDate("");setNotice("陪跑紀錄已安全儲存至雲端。");}
   setBusy(false);
  }
  const memberState=(id:string)=>monthlyRecords.some(r=>r.member_id===id&&r.invitation_sent)?(monthlyRecords.some(r=>r.member_id===id&&r.member_replied)?"已回覆":"已邀約待回覆"):"尚未邀約";
