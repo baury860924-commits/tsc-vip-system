@@ -66,7 +66,7 @@ export default function CoachingPage(){
   setBusy(false);
  }
  const memberState=(id:string)=>monthlyRecords.some(r=>r.member_id===id&&r.invitation_sent)?(monthlyRecords.some(r=>r.member_id===id&&r.member_replied)?"已回覆":"已邀約待回覆"):"尚未邀約";
- const monthlyVisible=members.filter(m=>(monthlyFilter==="全部"||memberState(m.id)===monthlyFilter)&&(m.name+" "+(m.vip_number||"")+" "+m.company).toLocaleLowerCase().includes(memberSearch.trim().toLocaleLowerCase()));
+ const monthlyVisible=members.filter(m=>(ownerFilter==="全部"||(ownerFilter==="我負責"&&myMemberIds.includes(m.id))||(ownerFilter==="其他會員"&&!myMemberIds.includes(m.id)))&&(monthlyFilter==="全部"||memberState(m.id)===monthlyFilter)&&(m.name+" "+(m.vip_number||"")+" "+m.company).toLocaleLowerCase().includes(memberSearch.trim().toLocaleLowerCase()));
  const inputStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
  return <main style={{maxWidth:900,margin:"32px auto",padding:20,fontFamily:"system-ui,sans-serif"}}>
   <a href="/admin/members">← 返回會員管理</a>　<a href="/admin/assignments">工作人員分派 →</a><h1>VIP 陪跑管理｜內部後台</h1>
