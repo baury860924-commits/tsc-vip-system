@@ -57,7 +57,7 @@ export default function MemberOverview(){
  const latest=records[0];
  const pending=latest?.follow_up_date&&latest.follow_up_date<=today&&latest.next_action?.trim()?[latest]:[];
  const upcoming=latest?.follow_up_date&&latest.follow_up_date>today&&latest.next_action?.trim()?[latest]:[];
- const expiry=member?.contract_end?(member.contract_end<today?"已到期":member.contract_end<=new Date(Date.parse(today+"T12:00:00+08:00")+30*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})?"30 天內到期":"有效"):"未設定到期日";
+ const expiry=member?.contract_end?(member.contract_end<today?"已到期":member.contract_end<=new Date(Date.parse(today+"T12:00:00+08:00")+30*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})?"30 天內到期":member.contract_end<=new Date(Date.parse(today+"T12:00:00+08:00")+60*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})?"31–60 天內到期":"有效"):"未設定到期日";
  const box={border:"1px solid #cbd5e1",borderRadius:12,padding:18,marginBottom:16} as const;
  return <main style={{maxWidth:850,margin:"24px auto",padding:"0 16px 40px",fontFamily:"system-ui,sans-serif",color:"#0f172a"}}>
   <a href="/admin/members">← 返回 VIP 會員名單</a>
