@@ -16,6 +16,9 @@ export default function CoachingPage(){
  const [busy,setBusy]=useState(false);
  const [notice,setNotice]=useState("");
  const [authorized,setAuthorized]=useState(false);
+ const [myMemberIds,setMyMemberIds]=useState<string[]>([]);
+ const [ownerFilter,setOwnerFilter]=useState("全部");
+ const [assignmentWarning,setAssignmentWarning]=useState("");
  const [date,setDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}));
  const [method,setMethod]=useState("LINE");
  const [invited,setInvited]=useState(false);
