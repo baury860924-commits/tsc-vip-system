@@ -25,7 +25,7 @@ export default function ReferralsAdmin(){
  const p=profile.data;if(!["admin","staff"].includes(p?.role||"")){if(active)setNotice("僅限管理員及工作人員");return;}
  if(!active)return;if(m.error||r.error||l.error){setNotice("讀取失敗，請先執行轉介紹資料表 SQL："+(r.error?.message||l.error?.message||m.error?.message));return;}
  const {data:directory}=await client.from("tsc_staff_directory").select("display_name,user_id,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
- if(!active)return;if(p.role==="staff"&&!directory){setNotice("工作人員帳號尚未綁定或已停用，請聯絡管理員。");return;}
+ if(!active)return;if(p?.role==="staff"&&!directory){setNotice("工作人員帳號尚未綁定或已停用，請聯絡管理員。");return;}
  setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
  if(active&&directory?.display_name){setAuthStaffName(directory.display_name);setWorkbenchOwner(directory.display_name);setWorkbench(true);if(new URLSearchParams(window.location.search).get("workbench")==="1")setPersonalOnly(true);}
 
