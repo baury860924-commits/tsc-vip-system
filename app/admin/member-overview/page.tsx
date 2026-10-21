@@ -5,6 +5,8 @@ type Member={id:string;name:string;vip_number:string|null;company:string;industr
 type Funnel={stage_number:number;title:string;description:string;goal:string;action_plan:string};
 type Coaching={id:string;contact_date:string;contact_method:string;invitation_sent:boolean;member_replied:boolean;summary:string;next_action:string;follow_up_date:string|null};
 type Consultation={id:string;subject:string;status:string;priority:string;follow_up_date:string|null};
+type Assignment={staff_user_id:string;assigned_at:string};
+type StaffProfile={user_id:string;display_name:string};
 const labels=["陌生接觸","入門體驗","主要產品"];
 export default function MemberOverview(){
  const [member,setMember]=useState<Member|null>(null);
@@ -13,6 +15,8 @@ export default function MemberOverview(){
  const [consultations,setConsultations]=useState<Consultation[]>([]);
  const [message,setMessage]=useState("正在確認帳號與載入會員資料…");
  const [warnings,setWarnings]=useState<string[]>([]);
+ const [assignment,setAssignment]=useState<Assignment|null>(null);
+ const [staffProfiles,setStaffProfiles]=useState<StaffProfile[]>([]);
  useEffect(()=>{let active=true;async function load(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if(!url||!key){setMessage("資料庫連線尚未設定。");return;}
@@ -40,6 +44,8 @@ export default function MemberOverview(){
   else setRecords(c.data||[]);
   if(q.error)issues.push("諮詢紀錄尚無法讀取");
   else setConsultations(q.data||[]);
+  const [assignmentResult,staffResult]=await Promise.all([sb.from("vip_staff_assignments").select("staff_user_id,assigned_at").eq("member_id",id).is("ended_at",null).order("assigned_at",{ascending:false}).limit(1),sb.from("vip_profiles").select("user_id,display_name").in("role",["admin","staff"])]);
+  if(!active)return;if(assignmentResult.error)issues.push("陪跑負責人資料尚無法讀取");else setAssignment(assignmentResult.data?.[0]||null);if(!staffResult.error)setStaffProfiles(staffResult.data||[]);
   setWarnings(issues);setMessage("");
  }void load();return()=>{active=false;};},[]);
  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
@@ -55,7 +61,7 @@ export default function MemberOverview(){
   {message?<p role="status" style={{marginTop:20}}>{message}</p>:member&&<>
    <h1 style={{marginBottom:4}}>{member.name}｜VIP 個別管理</h1>
    <p style={{color:"#475569"}}>{member.vip_number||"未編號"}｜{member.company||"未填公司"}｜{member.industry||"未填產業"}</p>
-   <section style={box}><h2 style={{marginTop:0}}>會員狀態</h2><p>合約：{member.contract_start||"未設定"} ～ {member.contract_end||"未設定"}</p><p><strong>會籍：{expiry}</strong></p><p>本月邀約：<strong>{invited?"已邀約":"尚未邀約"}</strong>｜會員回覆：{replied?"已回覆":"尚未回覆"}</p>
+   <section style={box}><h2 style={{marginTop:0}}>會員狀態</h2><p>陪跑負責人：<strong>{assignment?staffProfiles.find(x=>x.user_id===assignment.staff_user_id)?.display_name||"已指派工作人員":"尚未指派"}</strong>　<a href="/admin/assignments">管理分派 →</a></p><p>合約：{member.contract_start||"未設定"} ～ {member.contract_end||"未設定"}</p><p><strong>會籍：{expiry}</strong></p><p>本月邀約：<strong>{invited?"已邀約":"尚未邀約"}</strong>｜會員回覆：{replied?"已回覆":"尚未回覆"}</p>
     <a href={"/admin/coaching?member="+encodeURIComponent(member.id)}>開啟此會員陪跑紀錄 →</a></section>
    <section style={box}><h2 style={{marginTop:0}}>目前待追蹤事項（{pending.length}）</h2>{pending.length===0?<p>沒有已到期且有待辦內容的紀錄。</p>:pending.map(r=><article key={r.id} style={{borderTop:"1px solid #e2e8f0",padding:"10px 0"}}><strong>{r.follow_up_date}</strong><p style={{whiteSpace:"pre-wrap"}}>{r.next_action}</p></article>)}</section>
    <section style={box}><h2 style={{marginTop:0}}>專屬三階段銷售漏斗</h2>{[1,2,3].map(n=>{const stage=stages.find(x=>x.stage_number===n);return <article key={n} style={{borderTop:"1px solid #e2e8f0",padding:"12px 0"}}><strong>第 {n} 階段｜{stage?.title||labels[n-1]}</strong><p style={{whiteSpace:"pre-wrap"}}>{stage?.description||"尚未填寫內容"}</p>{stage?.goal&&<p>目標：{stage.goal}</p>}{stage?.action_plan&&<p>行動：{stage.action_plan}</p>}</article>;})}<a href="/admin/members">前往會員管理編輯銷售漏斗 →</a></section>
