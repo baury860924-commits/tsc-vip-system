@@ -82,6 +82,8 @@ export default function CoachingPage(){
  }
  async function save(e:React.FormEvent){
   e.preventDefault();if(!client||!authorized||!selected||(accountRole==="staff"&&!myMemberIds.includes(selected)))return;
+  if(followDate&&!nextAction.trim()){setNotice("設定追蹤日期時，請先填寫下次行動，避免產生無內容的待辦。");return;}
+  if(nextAction.trim()&&!followDate){setNotice("已填寫下次行動，請設定追蹤日期，才能顯示在待辦工作台。");return;}
   setBusy(true);setNotice("");
   const {data,error}=await client.from("vip_coaching_records").insert({member_id:selected,contact_date:date,contact_method:method,invitation_sent:invited,member_replied:replied,summary:summary.trim(),next_action:nextAction.trim(),follow_up_date:followDate||null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
   if(error)setNotice("儲存失敗："+(["42P01","PGRST205"].includes(error.code||"")?"陪跑資料表尚未建立，請先執行 SQL 設定":error.code||"權限錯誤"));
