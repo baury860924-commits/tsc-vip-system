@@ -45,7 +45,7 @@ export default function CoachingPage(){
     const {data:assigned,error:assignmentError}=await sb.from("vip_staff_assignments").select("member_id").eq("staff_user_id",user.id).is("ended_at",null);
     const assignedIds=assignmentError?[]:(assigned||[]).map(a=>a.member_id);
     if(active){if(assignmentError)setAssignmentWarning("工作人員分派資料讀取失敗，請管理員確認分派資料表與權限。");else setMyMemberIds(assignedIds);}
-    if(profile?.role==="staff"&&assignmentError)return;
+    if(profile?.role==="staff"&&assignmentError){if(active)setNotice("無法驗證你負責的 VIP，請管理員確認分派資料表及權限。");return;}
     const membersQuery=sb.from("vip_members").select("id,name,vip_number,company").order("vip_number",{ascending:true}).limit(200);
     const {data,error}=profile?.role==="staff"?(assignedIds.length?await membersQuery.in("id",assignedIds):{data:[] as Member[],error:null}):await membersQuery;
     if(active){setAuthorized(true);if(error)setNotice("無法讀取會員名單："+(error.code||"權限錯誤"));else{setMembers(data||[]);const linked=new URLSearchParams(window.location.search).get("member");if(linked&&(data||[]).some(m=>m.id===linked)){setSelected(linked);const history=await sb.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",linked).order("contact_date",{ascending:false}).limit(100);if(active){if(history.error)setNotice("讀取會員歷程失敗："+history.error.code);else setRecords(history.data||[]);}}}}
