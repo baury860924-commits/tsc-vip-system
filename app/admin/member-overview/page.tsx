@@ -54,7 +54,9 @@ export default function MemberOverview(){
  const thisMonth=records.filter(r=>r.contact_date.startsWith(month));
  const invited=thisMonth.some(r=>r.invitation_sent);
  const replied=thisMonth.some(r=>r.member_replied);
- const pending=records.filter(r=>r.follow_up_date&&r.follow_up_date<=today&&r.next_action);
+ const latest=records[0];
+ const pending=latest?.follow_up_date&&latest.follow_up_date<=today&&latest.next_action?.trim()?[latest]:[];
+ const upcoming=latest?.follow_up_date&&latest.follow_up_date>today&&latest.next_action?.trim()?[latest]:[];
  const expiry=member?.contract_end?(member.contract_end<today?"已到期":member.contract_end<=new Date(Date.parse(today+"T12:00:00+08:00")+30*86400000).toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"})?"30 天內到期":"有效"):"未設定到期日";
  const box={border:"1px solid #cbd5e1",borderRadius:12,padding:18,marginBottom:16} as const;
  return <main style={{maxWidth:850,margin:"24px auto",padding:"0 16px 40px",fontFamily:"system-ui,sans-serif",color:"#0f172a"}}>
@@ -64,7 +66,8 @@ export default function MemberOverview(){
    <p style={{color:"#475569"}}>{member.vip_number||"未編號"}｜{member.company||"未填公司"}｜{member.industry||"未填產業"}</p>
    <section style={box}><h2 style={{marginTop:0}}>會員狀態</h2><p>陪跑負責人：<strong>{assignment?staffProfiles.find(x=>x.user_id===assignment.staff_user_id)?.display_name||"已指派工作人員":"尚未指派"}</strong>　<a href="/admin/assignments">管理分派 →</a></p><p>合約：{member.contract_start||"未設定"} ～ {member.contract_end||"未設定"}</p><p><strong>會籍：{expiry}</strong></p><p>本月邀約：<strong>{invited?"已邀約":"尚未邀約"}</strong>｜會員回覆：{replied?"已回覆":"尚未回覆"}</p>
     <a href={"/admin/coaching?member="+encodeURIComponent(member.id)}>開啟此會員陪跑紀錄 →</a></section>
-   <section style={box}><h2 style={{marginTop:0}}>目前待追蹤事項（{pending.length}）</h2>{pending.length===0?<p>沒有已到期且有待辦內容的紀錄。</p>:pending.map(r=><article key={r.id} style={{borderTop:"1px solid #e2e8f0",padding:"10px 0"}}><strong>{r.follow_up_date}</strong><p style={{whiteSpace:"pre-wrap"}}>{r.next_action}</p></article>)}</section>
+   <section style={box}><h2 style={{marginTop:0}}>目前待追蹤事項（{pending.length}）</h2>{pending.length===0?<p>沒有今天或逾期的待辦事項。</p>:pending.map(r=><article key={r.id} style={{borderTop:"1px solid #e2e8f0",padding:"10px 0"}}><strong>{r.follow_up_date}</strong><p style={{whiteSpace:"pre-wrap"}}>{r.next_action}</p></article>)}</section>
+   <section style={box}><h2 style={{marginTop:0}}>未來追蹤（{upcoming.length}）</h2>{upcoming.length===0?<p>目前沒有未來待辦事項。</p>:upcoming.map(r=><p key={r.id} style={{whiteSpace:"pre-wrap"}}>{r.follow_up_date}｜{r.next_action}</p>)}</section>
    <section style={box}><h2 style={{marginTop:0}}>專屬三階段銷售漏斗</h2>{[1,2,3].map(n=>{const stage=stages.find(x=>x.stage_number===n);return <article key={n} style={{borderTop:"1px solid #e2e8f0",padding:"12px 0"}}><strong>第 {n} 階段｜{stage?.title||labels[n-1]}</strong><p style={{whiteSpace:"pre-wrap"}}>{stage?.description||"尚未填寫內容"}</p>{stage?.goal&&<p>目標：{stage.goal}</p>}{stage?.action_plan&&<p>行動：{stage.action_plan}</p>}</article>;})}<a href="/admin/members">前往會員管理編輯銷售漏斗 →</a></section>
    <section style={box}><h2 style={{marginTop:0}}>最近陪跑紀錄（{records.length}）</h2>{records.length===0?<p>尚無陪跑紀錄。</p>:records.slice(0,8).map(r=><article key={r.id} style={{borderTop:"1px solid #e2e8f0",padding:"12px 0"}}><strong>{r.contact_date}｜{r.contact_method}</strong><p>邀約：{r.invitation_sent?"是":"否"}｜回覆：{r.member_replied?"是":"否"}</p>{r.summary&&<p style={{whiteSpace:"pre-wrap"}}>{r.summary}</p>}{r.next_action&&<p style={{whiteSpace:"pre-wrap"}}>待辦：{r.next_action}</p>}</article>)}</section>
    <section style={box}><h2 style={{marginTop:0}}>諮詢需求（{consultations.length}）</h2>{consultations.length===0?<p>尚無諮詢紀錄。</p>:consultations.map(c=><p key={c.id}>{c.subject}｜{c.status}｜{c.priority}{c.follow_up_date?"｜追蹤 "+c.follow_up_date:""}</p>)}<a href="/admin/consultations">前往諮詢管理 →</a></section>
