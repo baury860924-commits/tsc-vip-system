@@ -44,7 +44,7 @@ export default function CoachingPage(){
   void init();return()=>{active=false;};
  },[]);
  async function chooseMember(id:string){
-  setSelected(id);setRecords([]);setNotice("");
+  setSelected(id);if(id)window.setTimeout(()=>document.getElementById("coaching-editor")?.scrollIntoView({behavior:"smooth",block:"start"}),100);setRecords([]);setNotice("");
   if(!client||!id)return;
   setBusy(true);
   const {data,error}=await client.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",id).order("contact_date",{ascending:false}).limit(100);
@@ -73,7 +73,7 @@ export default function CoachingPage(){
     <p style={{fontSize:13,color:"#475569"}}>統計以聯繫日期所屬月份計算，已發出邀約即完成本月義務，會員回覆另外計算。</p>
    </section>
    <label>選擇 VIP 會員<select style={inputStyle} value={selected} onChange={e=>void chooseMember(e.target.value)}><option value="">請選擇會員</option>{members.map(m=><option key={m.id} value={m.id}>{m.vip_number||"未編號"}｜{m.name}{m.company?"｜"+m.company:""}</option>)}</select></label>
-   {selected&&<><section style={{border:"1px solid #ddd",padding:20,borderRadius:12,marginTop:20}}><h2>新增陪跑紀錄</h2>
+   {selected&&<><section id="coaching-editor" style={{border:"1px solid #ddd",padding:20,borderRadius:12,marginTop:20,scrollMarginTop:20}}><h2>新增陪跑紀錄</h2>
     <form onSubmit={save} style={{display:"grid",gap:14}}>
      <label>聯繫日期<input required type="date" value={date} onChange={e=>setDate(e.target.value)} style={inputStyle}/></label>
      <label>聯繫方式<select style={inputStyle} value={method} onChange={e=>setMethod(e.target.value)}>{["LINE","電話","視訊","實體","其他"].map(x=><option key={x}>{x}</option>)}</select></label>
