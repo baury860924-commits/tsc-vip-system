@@ -8,6 +8,9 @@ export default function CoachingPage(){
  const [members,setMembers]=useState<Member[]>([]);
  const [selected,setSelected]=useState("");
  const [records,setRecords]=useState<RecordRow[]>([]);
+ const [followUps,setFollowUps]=useState<Pick<RecordRow,"id"|"member_id"|"follow_up_date"|"next_action"|"contact_date">[]>([]);
+ const [followUpError,setFollowUpError]=useState("");
+ const [followUpFilter,setFollowUpFilter]=useState("今天與逾期");
  const [monthlyRecords,setMonthlyRecords]=useState<Pick<RecordRow,"member_id"|"contact_date"|"invitation_sent"|"member_replied">[]>([]);
  const [monthError,setMonthError]=useState("");
  const [memberSearch,setMemberSearch]=useState("");
