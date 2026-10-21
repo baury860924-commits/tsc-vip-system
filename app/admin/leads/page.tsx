@@ -84,7 +84,7 @@ export default function LeadManagement(){
  {selectedLead?<div style={{border:"1px solid #cbd5e1",padding:22,borderRadius:12}}>
  <h2>{selectedLead.display_name||selectedLead.lead_code}｜轉換歷程</h2><section style={{padding:16,background:"#ecfeff",border:"2px solid #0e7490",borderRadius:12,marginBottom:18}}><h3>快速記錄本次聯繫</h3><p>聯繫日期：今天。記錄人員：{signedInStaff||"登入帳號尚未綁定工作人員"}</p><label>聯繫結果 *<textarea rows={3} maxLength={1000} value={quickResult} onChange={e=>setQuickResult(e.target.value)} style={field}/></label><label style={{display:"block",marginTop:12}}>下次追蹤日期（預設保留原日期，可調整或清空）<input type="date" value={quickDate} onChange={e=>setQuickDate(e.target.value)} style={field}/></label><button type="button" disabled={quickBusy||!quickResult.trim()||!signedInStaff} onClick={()=>void quickSave()} style={{marginTop:12,padding:14,width:"100%",background:"#0f766e",color:"white",border:0,borderRadius:8}}>{quickBusy?"儲存中…":"儲存本次聯繫"}</button>{quickNotice&&<p role="status">{quickNotice}</p>}</section>
  <p>介紹人：{memberName(selectedLead.referrer_member_id)}<br/>代碼：{selectedLead.lead_code}</p>
- <div className="leadStages">
+ {accountRole==="admin"&&<><div className="leadStages">
  <div style={{border:"1px solid #e2e8f0",borderRadius:12,padding:14}}>
  <label style={interestBox}><input style={checkStyle} type="checkbox" checked={coffee} onChange={e=>setCoffee(e.target.checked)}/><span>對 TSC 活動有興趣</span></label>
  <label style={{display:"block",marginTop:14}}>報名狀態<select style={field} value={coffeeStage} onChange={e=>setCoffeeStage(e.target.value)}>{["未報名","已報名"].map(x=><option key={x}>{x}</option>)}</select></label>
@@ -106,6 +106,7 @@ export default function LeadManagement(){
  </div>
  <label style={{display:"block",marginTop:14}}>最近聯繫結果<textarea style={field} rows={2} maxLength={1000} value={contactResult} onChange={e=>setContactResult(e.target.value)} placeholder="例如：已邀約，對方下週回覆"/></label>
  </div>
+ </>}
  <section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
  <h3>聯繫歷程（{history.length} 筆）</h3>
  <p style={{fontSize:14,color:"#475569"}}>填寫聯繫日期與聯繫結果，系統會以實際登入的工作人員記錄，不會變更案件負責人。按「新增聯繫紀錄」後會同步更新追蹤摘要；不需再按一次儲存。</p>
@@ -114,7 +115,7 @@ export default function LeadManagement(){
  {history.length===0&&<p>尚無聯繫歷程。</p>}
  {history.map(h=><article key={h.id} style={{padding:12,borderBottom:"1px solid #e2e8f0"}}><strong>{h.contacted_on}｜{h.staff_name}</strong><p style={{whiteSpace:"pre-wrap",margin:"8px 0"}}>{h.result}</p><small>下次追蹤：{h.next_follow_up_date||"未設定"}</small></article>)}
  </section>
- <section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
+ {accountRole==="admin"&&<><section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
  <h3>負責人交接歷程（{assignments.length} 筆）</h3>
  <p style={{fontSize:14,color:"#475569"}}>修改追蹤負責人並儲存後，系統會自動記錄原負責人、新負責人及變更時間。舊資料在啟用前的交接無法回溯。</p>
  {!assignmentReady?<p style={{color:"#b45309"}}>交接紀錄尚未啟用或讀取失敗，請確認已執行交接紀錄 SQL。</p>:assignments.length===0?<p>尚無交接紀錄。</p>:assignments.map(a=><article key={a.id} style={{padding:"10px 0",borderBottom:"1px solid #e2e8f0"}}>
@@ -124,6 +125,7 @@ export default function LeadManagement(){
  </section>
  <label style={{display:"block",marginTop:18}}>追蹤備註<textarea style={field} rows={4} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
  <button disabled={busy} onClick={()=>void save()} style={{padding:14,background:"#164e63",color:"white",border:0,borderRadius:8,marginTop:14,width:"100%",cursor:"pointer"}}>{busy?"儲存中…":"儲存轉換歷程"}</button>
+ </>}
  </div>:<div style={{border:"1px dashed #94a3b8",borderRadius:12,padding:32,color:"#475569"}}><h2>個別轉換歷程</h2><p>請從左側新朋友清單選擇一位，查看並編輯他的興趣及轉換進度。</p></div>}
  </section></div>
  <style jsx>{`
