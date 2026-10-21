@@ -17,6 +17,8 @@ export default function AdminMembersPage(){
  const [start,setStart]=useState("");
  const [end,setEnd]=useState("");
  const [selected,setSelected]=useState<VipMember|null>(null);
+ const [memberSearch,setMemberSearch]=useState("");
+ const [expiryFilter,setExpiryFilter]=useState("全部");
  const [stages,setStages]=useState<{stage_number:number;title:string;description:string;goal:string;action_plan:string}[]>([]);
  const [bindingBusy,setBindingBusy]=useState(false);
  const [funnelBusy,setFunnelBusy]=useState(false);
@@ -82,6 +84,9 @@ export default function AdminMembersPage(){
   else if(data){setMembers(old=>[data,...old]);setName("");setCompany("");setIndustry("");setVipNumber("");setStart("");setEnd("");setMessage("已新增至 Supabase 雲端會員資料庫。");}
   setSaving(false);
  }
+ const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
+ const expiryStatus=(m:VipMember)=>{if(!m.contract_end)return "未設定到期日";const days=Math.ceil((Date.parse(m.contract_end+"T12:00:00+08:00")-Date.parse(today+"T12:00:00+08:00"))/86400000);return days<0?"已到期":days<=30?"30 天內到期":days<=60?"60 天內到期":"有效";};
+ const visibleMembers=members.filter(m=>(expiryFilter==="全部"||expiryStatus(m)===expiryFilter)&&(m.name+" "+m.company+" "+m.industry+" "+(m.vip_number||"")).toLocaleLowerCase().includes(memberSearch.trim().toLocaleLowerCase()));
  const fieldStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8};
  return <main style={{maxWidth:1000,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}>
   <a href="/account">← 返回帳號中心</a><h1>VIP 會員管理｜正式雲端版</h1>
