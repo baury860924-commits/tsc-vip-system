@@ -23,7 +23,7 @@ export default function StaffAdmin(){
  if(completed){setAssignedLeads(old=>old.map(x=>tasks.slice(0,completed).some(t=>t.id===x.id)?{...x,assigned_staff_name:destination.display_name}:x));}
  setNotice(errorMessage?"已移轉 "+completed+" 筆，部分失敗："+errorMessage:"已成功移轉 "+completed+" 筆案件，交接紀錄已由資料庫記錄。");setBusy(false);
  }
- async function toggle(staff:Staff){if(!db||role!=="admin"||busy)return;setBusy(true);setNotice("");
+ async function toggle(staff:Staff){if(!db||role!=="admin"||busy)return;if(staff.is_active){const {count,error:countError}=await db.from("vip_referral_leads").select("id",{count:"exact",head:true}).eq("assigned_staff_name",staff.display_name).neq("vip_stage","已加入");if(countError){setNotice("無法確認待移轉案件，已取消停用："+countError.message);return;}if((count||0)>0){setNotice("此人尚有 "+count+" 筆未完成案件。請先在下方移轉給其他工作人員，再停用。");return;}if(!window.confirm("確定停用「"+staff.display_name+"」？此操作不會直接撤銷 Supabase 登入權限。"))return;}setBusy(true);setNotice("");
  const {data,error}=await db.from("tsc_staff_directory").update({is_active:!staff.is_active,updated_at:new Date().toISOString()}).eq("id",staff.id).select("*").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setRows(old=>old.map(x=>x.id===staff.id?data:x));setNotice(data.is_active?"已重新啟用":"已停用名錄項目。注意：此操作不會撤銷 Supabase 登入權限，也不會自動移轉待辦。");}setBusy(false);}
  async function bind(staff:Staff){if(!db||role!=="admin"||busy)return;const id=(binding[staff.id]||"").trim();if(id&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)){setNotice("請輸入有效的 Authentication UUID");return;}
