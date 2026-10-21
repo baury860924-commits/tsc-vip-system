@@ -65,6 +65,16 @@ export default function CoachingPage(){
   else setRecords(data||[]);
   setBusy(false);
  }
+ async function completeTask(task:typeof followUps[number]){
+  if(!client||busy||(accountRole==="staff"&&!myMemberIds.includes(task.member_id)))return;
+  if(!window.confirm("確定這項追蹤待辦已完成？系統會保留原始紀錄，另外新增一筆完成紀錄。"))return;
+  setBusy(true);setNotice("");
+  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"});
+  const {data,error}=await client.from("vip_coaching_records").insert({member_id:task.member_id,contact_date:today,contact_method:"其他",invitation_sent:false,member_replied:false,summary:"已完成追蹤待辦："+task.next_action,next_action:"",follow_up_date:null}).select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").single();
+  if(error)setNotice("標記完成失敗："+(error.code||"權限錯誤"));
+  else if(data){setFollowUps(old=>[{id:data.id,member_id:data.member_id,contact_date:data.contact_date,next_action:data.next_action,follow_up_date:data.follow_up_date,created_at:data.created_at},...old]);if(selected===task.member_id)setRecords(old=>[data,...old]);setNotice("待辦已完成，原始紀錄仍保留。");}
+  setBusy(false);
+ }
  async function save(e:React.FormEvent){
   e.preventDefault();if(!client||!authorized||!selected||(accountRole==="staff"&&!myMemberIds.includes(selected)))return;
   setBusy(true);setNotice("");
