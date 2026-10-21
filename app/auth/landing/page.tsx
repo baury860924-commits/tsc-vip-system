@@ -7,7 +7,7 @@ export default function LoginLanding(){
  try{const sb=createClient(url,key);const {data:{user},error}=await sb.auth.getUser();if(error||!user){window.location.replace("/login");return;}
  const {data:profile,error:roleError}=await sb.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();
  if(roleError){if(active)setMessage("無法讀取帳號權限，請稍後重試或聯絡管理員。");return;}
- if(profile?.role==="admin"||profile?.role==="staff"){window.location.replace("/admin/referrals?workbench=1");return;}
+ if(profile?.role==="admin"||profile?.role==="staff"){window.location.replace("/admin/my-workbench");return;}
  if(profile?.role==="vip"){window.location.replace("/member");return;}
  window.location.replace("/account");
  }catch{if(active)setMessage("驗證連線失敗，請稍後重試。");}})();return()=>{active=false;};},[]);
