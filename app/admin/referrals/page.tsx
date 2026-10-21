@@ -24,8 +24,9 @@ export default function ReferralsAdmin(){
  const [profile,m,r,l]=await Promise.all([client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle(),client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_referrals").select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").order("created_at",{ascending:false}).limit(300),client.from("vip_referral_leads").select("id,referrer_member_id,lead_code,display_name,coffee_stage,positioning_stage,vip_stage,assigned_staff_name,last_contact_date,next_follow_up_date,contact_result").limit(500)]);
  const p=profile.data;if(!["admin","staff"].includes(p?.role||"")){if(active)setNotice("僅限管理員及工作人員");return;}
  if(!active)return;if(m.error||r.error||l.error){setNotice("讀取失敗，請先執行轉介紹資料表 SQL："+(r.error?.message||l.error?.message||m.error?.message));return;}
- setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
  const {data:directory}=await client.from("tsc_staff_directory").select("display_name,user_id,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
+ if(!active)return;if(p.role==="staff"&&!directory){setNotice("工作人員帳號尚未綁定或已停用，請聯絡管理員。");return;}
+ setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
  if(active&&directory?.display_name){setAuthStaffName(directory.display_name);setWorkbenchOwner(directory.display_name);setWorkbench(true);if(new URLSearchParams(window.location.search).get("workbench")==="1")setPersonalOnly(true);}
 
  }catch{if(active)setNotice("資料庫連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
