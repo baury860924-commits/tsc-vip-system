@@ -13,6 +13,7 @@ export default function ReferralsAdmin(){
  const [referrer,setReferrer]=useState(""),[recipient,setRecipient]=useState(""),[date,setDate]=useState(new Date().toLocaleDateString("en-CA")),[lead,setLead]=useState(""),[summary,setSummary]=useState("");
  const [view,setView]=useState<"overview"|"member">("overview"),[selectedMember,setSelectedMember]=useState(""),[leadSearch,setLeadSearch]=useState(""),[followFilter,setFollowFilter]=useState("全部待追蹤"),[ownerFilter,setOwnerFilter]=useState("全部負責人"),[dueFilter,setDueFilter]=useState("全部日期"),[workbench,setWorkbench]=useState(false),[workbenchOwner,setWorkbenchOwner]=useState("");
  const [authStaffName,setAuthStaffName]=useState("");
+ const [accountRole,setAccountRole]=useState("");
  const [personalOnly,setPersonalOnly]=useState(false);
  const [workbenchDueFilter,setWorkbenchDueFilter]=useState("全部"),[workbenchSearch,setWorkbenchSearch]=useState("");
  const [leadId,setLeadId]=useState(""),[linkLeadId,setLinkLeadId]=useState("");
@@ -26,19 +27,19 @@ export default function ReferralsAdmin(){
  if(!active)return;if(m.error||r.error||l.error){setNotice("讀取失敗，請先執行轉介紹資料表 SQL："+(r.error?.message||l.error?.message||m.error?.message));return;}
  const {data:directory}=await client.from("tsc_staff_directory").select("display_name,user_id,is_active").eq("user_id",user.id).eq("is_active",true).maybeSingle();
  if(!active)return;if(p?.role==="staff"&&!directory){setNotice("工作人員帳號尚未綁定或已停用，請聯絡管理員。");return;}
- setMembers(m.data||[]);setItems(r.data||[]);setLeads(l.data||[]);setReady(true);
+ setAccountRole(p?.role||"");setMembers(m.data||[]);setItems(p?.role==="staff"?(r.data||[]).filter(x=>(l.data||[]).some(y=>y.id===x.lead_id&&y.assigned_staff_name===directory?.display_name)):(r.data||[]));setLeads(p?.role==="staff"?(l.data||[]).filter(x=>x.assigned_staff_name===directory?.display_name):(l.data||[]));setReady(true);
  if(active&&directory?.display_name){setAuthStaffName(directory.display_name);setWorkbenchOwner(directory.display_name);setWorkbench(true);if(new URLSearchParams(window.location.search).get("workbench")==="1")setPersonalOnly(true);}
 
  }catch{if(active)setNotice("資料庫連線失敗");}finally{if(active)setLoading(false);}})();return()=>{active=false;};},[]);
  useEffect(()=>{try{const saved=window.localStorage.getItem("tsc_workbench_owner");if(saved&&!new URLSearchParams(window.location.search).has("workbench"))setWorkbenchOwner(saved);}catch{}},[]);
- const chooseWorkbenchOwner=(value:string)=>{setWorkbenchOwner(value);try{if(value)window.localStorage.setItem("tsc_workbench_owner",value);else window.localStorage.removeItem("tsc_workbench_owner");}catch{}};
+ const chooseWorkbenchOwner=(value:string)=>{if(accountRole==="staff"&&value!==authStaffName)return;setWorkbenchOwner(value);try{if(value)window.localStorage.setItem("tsc_workbench_owner",value);else window.localStorage.removeItem("tsc_workbench_owner");}catch{}};
  const nameOf=(id:string)=>{const m=members.find(x=>x.id===id);return m?(m.vip_number||"VIP")+"｜"+m.name:"未知會員";};
- async function create(e:React.FormEvent){e.preventDefault();if(!sb||!ready||!referrer||!date||(channel==="VIP 互相轉介紹"&&(!recipient||referrer===recipient)))return;
+ async function create(e:React.FormEvent){e.preventDefault();if(accountRole!=="admin")return;if(!sb||!ready||!referrer||!date||(channel==="VIP 互相轉介紹"&&(!recipient||referrer===recipient)))return;
  setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referrals").insert({referrer_member_id:referrer,lead_id:leadId||null,recipient_member_id:channel==="VIP 互相轉介紹"?recipient:null,referral_type:channel==="TSC 活動"?"咖啡聚會":channel,referral_date:date,lead_label:lead.trim(),summary:summary.trim()}).select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("新增失敗："+error.message);else if(data){setItems(old=>[data,...old]);setLead("");setLeadId("");setSummary("");setNotice("已建立轉介紹紀錄");}setBusy(false);}
  function begin(r:Referral){setEditing(r.id);setLinkLeadId(r.lead_id||"");setStatus(r.status);setFollow(r.follow_up_date||"");setNote(r.internal_note||"");}
- async function update(id:string){if(!sb||!ready)return;setBusy(true);setNotice("");
+ async function update(id:string){if(accountRole!=="admin"||!sb||!ready)return;setBusy(true);setNotice("");
  const {data,error}=await sb.from("vip_referrals").update({status,lead_id:linkLeadId||null,follow_up_date:follow||null,internal_note:note,updated_at:new Date().toISOString()}).eq("id",id).select("id,lead_id,referrer_member_id,recipient_member_id,referral_type,referral_date,lead_label,summary,status,follow_up_date,internal_note,created_at").single();
  if(error)setNotice("更新失敗："+error.message);else if(data){setItems(old=>old.map(x=>x.id===id?data:x));setEditing(null);setNotice("已更新轉介紹進度");}setBusy(false);}
  const scoped=items.filter(x=>view==="overview"||x.referrer_member_id===selectedMember);
@@ -57,7 +58,7 @@ export default function ReferralsAdmin(){
  const overdue=scopedLeads.filter(l=>followStage(l)!=="已完成"&&l.next_follow_up_date&&l.next_follow_up_date<today).length;
  const workbenchRows=leads.filter(l=>followStage(l)!=="已完成"&&Boolean(workbenchOwner)&&l.assigned_staff_name===workbenchOwner).sort((a,b)=>dueOrder(a)-dueOrder(b)||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999"));
  const visibleWorkbenchRows=workbenchRows.filter(l=>(workbenchDueFilter==="全部"||dueKind(l)===workbenchDueFilter)&&(l.display_name||"").toLocaleLowerCase().includes(workbenchSearch.trim().toLocaleLowerCase()));
- const staffNames=Array.from(new Set(leads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x)))).sort();
+ const staffNames=accountRole==="staff"?[authStaffName].filter(Boolean):Array.from(new Set(leads.map(l=>l.assigned_staff_name).filter((x):x is string=>Boolean(x)))).sort();
  const followKinds=["全部待追蹤","VIP 已報名待加入","藍海課已報名待加入 VIP","TSC 活動已報名待藍海課","尚未報名 TSC 活動"];
  const openMember=(id:string)=>{setSelectedMember(id);setView("member");setFilter("全部");setChannelFilter("全部類型");};
  return <main style={{maxWidth:1080,margin:"32px auto",padding:24,fontFamily:"system-ui,sans-serif"}}><a href="/admin/members">← 返回會員管理</a><h1>VIP 轉介紹管理</h1><p><a href="/admin/leads">→ 新朋友檔案與轉換歷程</a></p><p>追蹤會員間的資源媒合與成交進度。第一版僅限管理員查看，請勿輸入被介紹者的電話、身分證或其他敏感資料。</p>
