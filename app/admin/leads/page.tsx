@@ -108,8 +108,8 @@ export default function LeadManagement(){
  </div>
  <section style={{marginTop:18,padding:16,border:"1px solid #cbd5e1",borderRadius:12}}>
  <h3>聯繫歷程（{history.length} 筆）</h3>
- <p style={{fontSize:14,color:"#475569"}}>填寫負責人、聯繫日期與聯繫結果，按「新增聯繫紀錄」即可同步更新新朋友的最後聯繫摘要與下次追蹤日期；不需再按一次儲存。歷史紀錄不會被覆蓋。</p>
- <button type="button" disabled={!historyReady||historyBusy||!owner.trim()||!contactResult.trim()} onClick={()=>void addHistory()} style={{padding:12,background:"#0f766e",color:"white",border:0,borderRadius:8,cursor:"pointer"}}>{historyBusy?"記錄中…":"＋ 新增聯繫紀錄"}</button>
+ <p style={{fontSize:14,color:"#475569"}}>填寫聯繫日期與聯繫結果，系統會以實際登入的工作人員記錄，不會變更案件負責人。按「新增聯繫紀錄」後會同步更新追蹤摘要；不需再按一次儲存。</p>
+ <button type="button" disabled={!historyReady||historyBusy||!signedInStaff||!contactResult.trim()} onClick={()=>void addHistory()} style={{padding:12,background:"#0f766e",color:"white",border:0,borderRadius:8,cursor:"pointer"}}>{historyBusy?"記錄中…":"＋ 新增聯繫紀錄"}</button>
  {historyNotice&&<p role="status">{historyNotice}</p>}
  {history.length===0&&<p>尚無聯繫歷程。</p>}
  {history.map(h=><article key={h.id} style={{padding:12,borderBottom:"1px solid #e2e8f0"}}><strong>{h.contacted_on}｜{h.staff_name}</strong><p style={{whiteSpace:"pre-wrap",margin:"8px 0"}}>{h.result}</p><small>下次追蹤：{h.next_follow_up_date||"未設定"}</small></article>)}
