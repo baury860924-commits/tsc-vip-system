@@ -32,7 +32,7 @@ export default function MemberOverview(){
   const [m,f,c,q]=await Promise.all([
    sb.from("vip_members").select("id,name,vip_number,company,industry,contract_start,contract_end").eq("id",id).maybeSingle(),
    sb.from("vip_funnel_stages").select("stage_number,title,description,goal,action_plan").eq("member_id",id).order("stage_number"),
-   sb.from("vip_coaching_records").select("id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date").eq("member_id",id).order("contact_date",{ascending:false}).limit(30),
+   sb.from("vip_coaching_records").select("id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date").eq("member_id",id).order("contact_date",{ascending:false}).order("created_at",{ascending:false}).limit(100),
    sb.from("vip_consultations").select("id,subject,status,priority,follow_up_date").eq("member_id",id).order("created_at",{ascending:false}).limit(30)
   ]);
   if(!active)return;
