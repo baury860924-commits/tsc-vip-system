@@ -28,6 +28,7 @@ export default function MemberOverview(){
   const {data:profile,error:profileError}=await sb.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();
   if(profileError||!["admin","staff"].includes(profile?.role||"")){setMessage("沒有內部會員資料查看權限。");return;}
   if(profile?.role==="staff"){const {data:staff}=await sb.from("tsc_staff_directory").select("is_active").eq("user_id",user.id).maybeSingle();if(!staff?.is_active){setMessage("工作人員帳號未綁定或已停用。");return;}}
+  if(profile?.role==="staff"){const {data:own,error:ownError}=await sb.from("vip_staff_assignments").select("member_id").eq("staff_user_id",user.id).eq("member_id",id).is("ended_at",null).limit(1);if(ownError||!own?.length){setMessage("此 VIP 尚未指派給你，無法查看個別管理資料。");return;}}
   const [m,f,c,q]=await Promise.all([
    sb.from("vip_members").select("id,name,vip_number,company,industry,contract_start,contract_end").eq("id",id).maybeSingle(),
    sb.from("vip_funnel_stages").select("stage_number,title,description,goal,action_plan").eq("member_id",id).order("stage_number"),
