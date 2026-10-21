@@ -19,6 +19,7 @@ export default function CoachingPage(){
  const [myMemberIds,setMyMemberIds]=useState<string[]>([]);
  const [ownerFilter,setOwnerFilter]=useState("全部");
  const [assignmentWarning,setAssignmentWarning]=useState("");
+ const [accountRole,setAccountRole]=useState("");
  const [date,setDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Taipei"}));
  const [method,setMethod]=useState("LINE");
  const [invited,setInvited]=useState(false);
@@ -36,6 +37,7 @@ export default function CoachingPage(){
     if(!user){if(active)setNotice("請先登入正式帳號。");return;}
     const {data:profile,error:roleError}=await sb.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();
     if(roleError||!["admin","staff"].includes(profile?.role||"")){if(active)setNotice("僅限管理員與工作人員使用。");return;}
+    if(active){setAccountRole(profile?.role||"");if(profile?.role==="staff")setOwnerFilter("我負責");}
     const {data,error}=await sb.from("vip_members").select("id,name,vip_number,company").order("vip_number",{ascending:true}).limit(200);
     if(active){setAuthorized(true);if(error)setNotice("無法讀取會員名單："+(error.code||"權限錯誤"));else{setMembers(data||[]);const linked=new URLSearchParams(window.location.search).get("member");if(linked&&(data||[]).some(m=>m.id===linked)){setSelected(linked);const history=await sb.from("vip_coaching_records").select("id,member_id,contact_date,contact_method,invitation_sent,member_replied,summary,next_action,follow_up_date,created_at").eq("member_id",linked).order("contact_date",{ascending:false}).limit(100);if(active){if(history.error)setNotice("讀取會員歷程失敗："+history.error.code);else setRecords(history.data||[]);}}}}
     const {data:assigned,error:assignmentError}=await sb.from("vip_staff_assignments").select("member_id").eq("staff_user_id",user.id).is("ended_at",null);
