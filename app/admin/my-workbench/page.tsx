@@ -23,7 +23,7 @@ export default function MyWorkbench(){
  setRows(all.filter(l=>l.vip_stage!=="已加入"));
  }catch{setError("目前無法讀取工作台，請檢查網路後重試。");}finally{setLoading(false);setRefreshing(false);}},[]);
  useEffect(()=>{const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;if(!url||!key){setError("系統尚未設定資料庫連線。");setLoading(false);return;}const client=createClient(url,key);setDb(client);void load(client,true);},[load]);
- const sorted=rows.filter(l=>(filter==="全部"||category(l,today)===filter)&&(l.display_name||"").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).sort((a,b)=>{const aKind=categories.indexOf(category(a,today)),bKind=categories.indexOf(category(b,today));return aKind-bKind||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999");});
+ const sorted=rows.filter(l=>(filter==="全部"||category(l,today)===filter)&&(l.display_name||"").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())).sort((a,b)=>{const aKind=categories.findIndex(k=>k===category(a,today)),bKind=categories.findIndex(k=>k===category(b,today));return aKind-bKind||(a.next_follow_up_date||"9999").localeCompare(b.next_follow_up_date||"9999");});
  const counts=Object.fromEntries(categories.map(k=>[k,k==="全部"?rows.length:rows.filter(l=>category(l,today)===k).length])) as Record<Category,number>;
  return <main style={{maxWidth:760,margin:"24px auto",padding:"0 16px 48px",fontFamily:"system-ui,sans-serif",color:"#0f172a"}}>
  <header style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}><div><h1 style={{marginBottom:4}}>我的每日追蹤</h1><p style={{marginTop:0,color:"#475569"}}>{staff?staff+"｜":""}{today}｜{role==="admin"?"管理員":"工作人員"}</p></div><a href="/account">帳號中心</a></header>
