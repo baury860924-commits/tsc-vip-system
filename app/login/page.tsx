@@ -1,6 +1,11 @@
 "use client";
-import {useState} from "react";
+
+import {useState,type FormEvent} from "react";
 import {createClient} from "@supabase/supabase-js";
+import "../member/portal.css";
+
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export default function LoginPage(){
  const [email,setEmail]=useState("");
@@ -9,47 +14,87 @@ export default function LoginPage(){
  const [showPassword,setShowPassword]=useState(false);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
- const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
- const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+ const [sentTo,setSentTo]=useState("");
+ const emailMode=mode==="email";
  const ready=Boolean(url&&key);
- async function submit(e:React.FormEvent){
-  e.preventDefault();if(!ready)return;
-  setBusy(true);setMessage("");
-  try{
-   const client=createClient(url!,key!);
-   const {error}=mode==="email"?await client.auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+"/auth/callback"}}):await client.auth.signInWithPassword({email:email.trim(),password});
+
+ async function submit(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();
+  if(!url||!key||busy)return;
+  const address=email.trim();
+  setBusy(true);
+  setMessage("");
+  setSentTo("");
+  try {
+   const client=createClient(url,key);
+   const {error}=emailMode?await client.auth.signInWithOtp({
+    email:address,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+"/auth/callback"}
+   }):await client.auth.signInWithPassword({email:address,password});
    if(error){
-    const code=error.code;
-    if(code==="email_not_confirmed")setMessage("這個帳號的 Email 尚未完成驗證，請由 Supabase 管理員確認帳號狀態。");
-    else if(code==="over_email_send_rate_limit"||code==="over_request_rate_limit"||error.status===429)setMessage("驗證服務目前有請求次數限制，請稍後再試，不要連續重複登入。");
-    else if(code==="invalid_credentials")setMessage("電子郵件或密碼不正確，或此帳號尚未設定密碼。為保護帳號安全，系統不會透露帳號是否存在。請至 Supabase Authentication → Users 確認帳號。");
-    else setMessage("登入失敗（"+(code||"驗證錯誤")+"），請檢查 Supabase Authentication 設定。");
+    if(error.code==="over_email_send_rate_limit"||error.code==="over_request_rate_limit"||error.status===429){
+     setMessage("剛才的登入嘗試較頻繁，請稍等幾分鐘再試。");
+    }else if(emailMode){
+     setMessage("目前無法寄出登入連結。請確認 Email 是否填寫正確，再試一次。");
+    }else if(error.code==="email_not_confirmed"||error.code==="invalid_credentials"){
+     setMessage("無法使用這組資料登入。請確認 Email 和密碼，或改用 Email 登入連結。");
+    }else{
+     setMessage("暫時無法登入，請稍後再試。");
+    }
     return;
    }
-   if(mode==="email"){setMessage("登入驗證信已寄出，請到 Gmail 點擊連結。若未收到，請查看垃圾郵件。");return;}window.location.assign("/auth/landing");
-  }catch{setMessage("登入服務暫時無法連線。");}
-  finally{setBusy(false);}
+   if(emailMode){
+    setSentTo(address);
+    return;
+   }
+   window.location.assign("/auth/landing");
+  }catch{
+   setMessage("目前連不上登入服務，請確認網路後再試。");
+  }finally{
+   setBusy(false);
+  }
  }
- return <main style={{maxWidth:480,margin:"8vh auto",padding:24,fontFamily:"system-ui,sans-serif"}}>
-  <a href="/" style={{color:"#155e75"}}>← 返回 VIP 系統展示頁</a>
-  <h1>VIP 系統登入</h1>
-  <p>管理人員與 VIP 會員登入入口</p>
-  <div style={{display:"flex",gap:8,marginBottom:16}}><button type="button" onClick={()=>setMode("email")} aria-pressed={mode==="email"}>Email 驗證信（免密碼）</button><button type="button" onClick={()=>setMode("password")} aria-pressed={mode==="password"}>密碼登入</button></div><form onSubmit={submit} style={{display:"grid",gap:14}}>
-   <label htmlFor="email">電子郵件</label>
-   <input id="email" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com" style={{padding:12,border:"1px solid #aaa",borderRadius:8}}/>
-   {mode==="password"&&<><label htmlFor="password">密碼</label>
-   <div style={{display:"flex",border:"1px solid #aaa",borderRadius:8,overflow:"hidden"}}>
-    <input id="password" type={showPassword?"text":"password"} autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="請輸入密碼" style={{flex:1,minWidth:0,padding:12,border:0}}/>
-    <button type="button" aria-label={showPassword?"隱藏密碼":"顯示密碼"} aria-pressed={showPassword} title={showPassword?"隱藏密碼":"顯示密碼"} onClick={()=>setShowPassword(v=>!v)} style={{padding:"0 14px",border:0,background:"transparent",cursor:"pointer",fontSize:20}}>
-     <span aria-hidden="true">👁</span>
-     <span style={{fontSize:12,marginLeft:5}}>{showPassword?"隱藏":"顯示"}</span>
-    </button>
+
+ function chooseMode(nextMode:"email"|"password"){
+  if(nextMode===mode)return;
+  setMode(nextMode);
+  setMessage("");
+  setShowPassword(false);
+ }
+
+ return <main className="member-portal portal-access">
+  <header className="portal-header">
+   <span className="portal-brand"><strong>TSC</strong> VIP</span>
+   <a href="/">返回系統展示頁</a>
+  </header>
+  <section className="portal-panel" aria-labelledby="login-title">
+   <div className="portal-section-heading">
+    <h1 id="login-title">歡迎回來</h1>
+    <p>請使用你在 TSC 登記的 Email 登入。</p>
    </div>
-   </>}
-   <button disabled={!ready||busy} type="submit" style={{padding:12,border:0,borderRadius:8,background:"#164e63",color:"white",cursor:ready?"pointer":"not-allowed"}}>{busy?"處理中…":mode==="email"?"寄送登入驗證信":"登入"}</button>
-  </form>
-  {message&&<p role="status">{message}</p>}
-  {!ready&&<p style={{padding:12,background:"#fff4d6",borderRadius:8}}>登入尚未啟用：網站尚未完成 Supabase 連線設定。此處請勿輸入真實密碼。</p>}
-  <p style={{color:"#555",fontSize:14}}>管理員 Email 僅預填方便辨識，不代表已建立帳號或授予管理權限。密碼需在正式身分驗證服務中安全建立。</p>
+   <div className="portal-mode" role="group" aria-label="登入方式">
+    <button type="button" aria-pressed={emailMode} disabled={busy} onClick={()=>chooseMode("email")}>Email 登入連結</button>
+    <button type="button" aria-pressed={!emailMode} disabled={busy} onClick={()=>chooseMode("password")}>使用密碼</button>
+   </div>
+   <p className="portal-hint">{emailMode?"我們會寄一封信給你，點開信中的連結就能登入。":"請輸入你已設定的登入密碼。"}</p>
+   <form onSubmit={submit}>
+    <fieldset className="portal-fields" disabled={!ready||busy}>
+     <label>電子郵件
+      <input type="email" name="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required value={email} onChange={event=>{setEmail(event.target.value);setSentTo("");setMessage("");}} placeholder="name@example.com"/>
+     </label>
+     {!emailMode&&<div className="portal-password">
+      <label>密碼
+       <input type={showPassword?"text":"password"} name="password" autoComplete="current-password" required value={password} onChange={event=>setPassword(event.target.value)}/>
+      </label>
+      <button className="portal-secondary" type="button" aria-label={showPassword?"隱藏密碼":"顯示密碼"} onClick={()=>setShowPassword(value=>!value)}>{showPassword?"隱藏":"顯示"}</button>
+     </div>}
+     <button type="submit">{busy?"處理中…":emailMode?(sentTo?"重新寄送登入連結":"寄送登入連結"):"登入"}</button>
+    </fieldset>
+   </form>
+   <p className="portal-message" role="status">{emailMode&&sentTo?
+    <>登入連結已寄到 <strong>{sentTo}</strong>。請到收件匣點開連結，也可以查看垃圾郵件資料夾。</>:
+    message||(!ready?"會員服務目前無法登入，請聯絡 TSC 團隊。":"")}</p>
+  </section>
+  <p className="portal-access-help">第一次登入或不確定登記的是哪個 Email？請聯絡 TSC 團隊協助確認。</p>
  </main>;
 }
+
