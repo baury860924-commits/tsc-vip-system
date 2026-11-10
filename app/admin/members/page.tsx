@@ -16,6 +16,7 @@ export default function AdminMembersPage(){
  const [vipNumber,setVipNumber]=useState("");
  const [start,setStart]=useState("");
  const [end,setEnd]=useState("");
+ const [followupLights,setFollowupLights]=useState<Record<string,string>>({});
  const [selected,setSelected]=useState<VipMember|null>(null);
  const [memberSearch,setMemberSearch]=useState("");
  const [expiryFilter,setExpiryFilter]=useState("全部");
@@ -55,7 +56,11 @@ export default function AdminMembersPage(){
     if(profileError){if(alive)setMessage("無法確認資料庫角色，請檢查 RLS 設定。");return;}
     if(alive)setRole(profile?.role||null);
     if(profile?.role!=="admin"&&profile?.role!=="staff"){if(alive)setMessage("此頁僅供正式管理員與工作人員使用。");return;}
-    const {data,error}=await client.from("vip_members").select("id,vip_number,name,company,industry,contract_start,contract_end,user_id,created_at").order("created_at",{ascending:false}).limit(200);
+    const [{data,error},lights]=await Promise.all([
+     client.from("vip_members").select("id,vip_number,name,company,industry,contract_start,contract_end,user_id,created_at").order("created_at",{ascending:false}).limit(200),
+     client.from("vip_member_followups").select("member_id,followup_light")
+    ]);
+    if(alive&&lights.data)setFollowupLights(Object.fromEntries(lights.data.map(row=>[row.member_id,row.followup_light])));
     if(alive){if(error)setMessage("會員名單讀取失敗："+(error.code||"未知錯誤"));else setMembers(data||[]);}
    }catch{if(alive)setMessage("登入或資料庫連線發生錯誤。");}
    finally{if(alive)setLoading(false);}
@@ -107,7 +112,7 @@ export default function AdminMembersPage(){
    </section>
    <p><a href="/admin/coaching">前往 VIP 陪跑管理 →</a>　<a href="/admin/consultations">前往 VIP 諮詢管理 →</a>　<a href="/admin/directory">VIP 公開名錄設定 →</a>　<a href="/admin/referrals">VIP 轉介紹管理 →</a></p>
    <h2>雲端會員名單（{visibleMembers.length}／{members.length} 筆）</h2><div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14}}>{["已到期","30 天內到期","31–60 天內到期"].map(k=><button type="button" key={k} onClick={()=>setExpiryFilter(k)} style={{padding:12,borderRadius:10,border:"1px solid #cbd5e1",background:expiryFilter===k?"#ecfeff":"white"}}><strong>{members.filter(m=>expiryStatus(m)===k).length}</strong>　{k}</button>)}</div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:14}}><label>搜尋會員<input type="search" value={memberSearch} onChange={e=>setMemberSearch(e.target.value)} placeholder="姓名、編號、公司、產業" style={fieldStyle}/></label><label>會籍到期篩選<select value={expiryFilter} onChange={e=>setExpiryFilter(e.target.value)} style={fieldStyle}>{["全部","有效","31–60 天內到期","30 天內到期","已到期","未設定到期日"].map(k=><option key={k}>{k}</option>)}</select></label></div>
-   {members.length===0?<p>尚未建立正式會員資料。原展示版測試資料不會自動匯入。</p>:visibleMembers.length===0?<div role="status" style={{padding:18,border:"1px solid #cbd5e1",borderRadius:10}}><p>沒有符合搜尋或會籍條件的 VIP。</p><button type="button" onClick={()=>{setMemberSearch("");setExpiryFilter("全部");}}>清除篩選，顯示全部會員</button></div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["VIP 編號","姓名","公司","產業","合約起日","合約到期","會籍狀態","登入綁定","示範 VIP","銷售漏斗"].map(h=><th key={h} style={{padding:10,borderBottom:"2px solid #ddd"}}>{h}</th>)}</tr></thead><tbody>{visibleMembers.map(m=><tr key={m.id}>{[m.vip_number||"未設定",m.name,m.company,m.industry,m.contract_start||"—",m.contract_end||"—",expiryStatus(m),m.user_id?"已綁定":"尚未綁定"].map((v,i)=><td key={i} style={{padding:10,borderBottom:"1px solid #eee"}}>{v}</td>)}<td style={{padding:10,borderBottom:"1px solid #eee"}}>{role==="admin"&&m.name==="陳柏儒"&&!m.user_id?<button type="button" disabled={bindingBusy} onClick={()=>void bindDemoVip(m)}>{bindingBusy?"處理中…":"綁定目前帳號"}</button>:m.name==="陳柏儒"&&m.user_id?"已綁定":"—"}</td><td style={{padding:10,borderBottom:"1px solid #eee"}}><button type="button" onClick={()=>void openFunnel(m)}>編輯漏斗</button><a href={"/admin/member-overview?member="+m.id}>會員總覽</a></td></tr>)}</tbody></table></div>}
+   {members.length===0?<p>尚未建立正式會員資料。原展示版測試資料不會自動匯入。</p>:visibleMembers.length===0?<div role="status" style={{padding:18,border:"1px solid #cbd5e1",borderRadius:10}}><p>沒有符合搜尋或會籍條件的 VIP。</p><button type="button" onClick={()=>{setMemberSearch("");setExpiryFilter("全部");}}>清除篩選，顯示全部會員</button></div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["VIP 編號","姓名","公司","產業","合約起日","合約到期","會籍狀態","登入綁定","追蹤燈號","示範 VIP","銷售漏斗"].map(h=><th key={h} style={{padding:10,borderBottom:"2px solid #ddd"}}>{h}</th>)}</tr></thead><tbody>{visibleMembers.map(m=><tr key={m.id}>{[m.vip_number||"未設定",m.name,m.company,m.industry,m.contract_start||"—",m.contract_end||"—",expiryStatus(m),m.user_id?"已綁定":"尚未綁定"].map((v,i)=><td key={i} style={{padding:10,borderBottom:"1px solid #eee"}}>{v}</td>)}<td style={{padding:10,borderBottom:"1px solid #eee",color:({"綠燈":"#166534","黃燈":"#854d0e","紅燈":"#b91c1c"} as Record<string,string>)[followupLights[m.id]]}}>{followupLights[m.id]||"—"}</td><td style={{padding:10,borderBottom:"1px solid #eee"}}>{role==="admin"&&m.name==="陳柏儒"&&!m.user_id?<button type="button" disabled={bindingBusy} onClick={()=>void bindDemoVip(m)}>{bindingBusy?"處理中…":"綁定目前帳號"}</button>:m.name==="陳柏儒"&&m.user_id?"已綁定":"—"}</td><td style={{padding:10,borderBottom:"1px solid #eee"}}><button type="button" onClick={()=>void openFunnel(m)}>編輯漏斗</button><a href={"/admin/member-overview?member="+m.id}>會員總覽</a></td></tr>)}</tbody></table></div>}
    {selected&&<section style={{border:"1px solid #cbd5e1",borderRadius:12,padding:20,marginTop:24}}>
     <h2>{selected.name}｜專屬三階段銷售漏斗</h2>
     <p>每位會員有獨立內容。管理員可編輯，VIP 本人僅可依資料庫權限查看。</p>

@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 type Member={id:string;name:string;vip_number:string|null};
-type Consultation={id:string;member_id:string;category:string;subject:string;description:string;priority:string;preferred_method:string;status:string;internal_note:string;follow_up_date:string|null;created_at:string};
+type Consultation={id:string;source:string;member_id:string;category:string;subject:string;description:string;priority:string;preferred_method:string;status:string;internal_note:string;follow_up_date:string|null;created_at:string};
 const statuses=["待處理","安排中","處理中","待追蹤","已完成"];
 const inputStyle={width:"100%",boxSizing:"border-box" as const,padding:10,border:"1px solid #cbd5e1",borderRadius:8,marginTop:5};
 export default function ConsultationAdmin(){
@@ -34,7 +34,7 @@ export default function ConsultationAdmin(){
     if(!user){if(alive)setNotice("請先登入");return;}
     const {data:profile,error:profileError}=await client.from("vip_profiles").select("role").eq("user_id",user.id).maybeSingle();
     if(profileError||!["admin","staff"].includes(profile?.role||"")){if(alive)setNotice("此頁僅供正式管理員及工作人員使用");return;}
-    const [m,c]=await Promise.all([client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_consultations").select("id,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").order("created_at",{ascending:false}).limit(200)]);
+    const [m,c]=await Promise.all([client.from("vip_members").select("id,name,vip_number").order("vip_number"),client.from("vip_consultations").select("id,source,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").order("created_at",{ascending:false}).limit(200)]);
     if(alive){setAuthorized(true);if(m.error)setNotice("會員讀取失敗："+m.error.code);else setMembers(m.data||[]);
      if(c.error)setNotice(c.error.code==="PGRST205"?"諮詢資料表尚未建立，請先執行 SQL。":"諮詢讀取失敗："+c.error.code);else setItems(c.data||[]);}
    }catch{if(alive)setNotice("連線失敗");}
@@ -46,14 +46,14 @@ export default function ConsultationAdmin(){
  async function create(e:React.FormEvent){
   e.preventDefault();if(!sb||!authorized||!memberId||!subject.trim())return;
   setBusy(true);setNotice("");
-  const {data,error}=await sb.from("vip_consultations").insert({member_id:memberId,category,subject:subject.trim(),description:description.trim(),priority,preferred_method:method}).select("id,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").single();
+  const {data,error}=await sb.from("vip_consultations").insert({member_id:memberId,category,subject:subject.trim(),description:description.trim(),priority,preferred_method:method}).select("id,source,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").single();
   if(error)setNotice("新增失敗："+(error.code==="PGRST205"?"請先建立諮詢資料表":error.code));
   else if(data){setItems(old=>[data,...old]);setSubject("");setDescription("");setNotice("諮詢已儲存至雲端");}
   setBusy(false);
  }
  async function update(id:string){
   if(!sb||!authorized)return;setBusy(true);setNotice("");
-  const {data,error}=await sb.from("vip_consultations").update({status,internal_note:note,follow_up_date:followDate||null,updated_at:new Date().toISOString()}).eq("id",id).select("id,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").single();
+  const {data,error}=await sb.from("vip_consultations").update({status,internal_note:note,follow_up_date:followDate||null,updated_at:new Date().toISOString()}).eq("id",id).select("id,source,member_id,category,subject,description,priority,preferred_method,status,internal_note,follow_up_date,created_at").single();
   if(error)setNotice("更新失敗："+error.code);
   else if(data){setItems(old=>old.map(x=>x.id===id?data:x));setEditing(null);setNotice("諮詢進度已更新");}
   setBusy(false);
@@ -75,7 +75,7 @@ export default function ConsultationAdmin(){
    <h2>諮詢處理清單（{items.length} 筆）</h2>
    <label>狀態篩選<select style={{...inputStyle,maxWidth:240}} value={filter} onChange={e=>setFilter(e.target.value)}>{["全部",...statuses].map(x=><option key={x}>{x}</option>)}</select></label>
    {items.filter(x=>filter==="全部"||x.status===filter).map(item=><article key={item.id} style={{border:"1px solid #cbd5e1",borderRadius:12,padding:18,marginTop:14}}>
-    <strong>{nameOf(item.member_id)}｜{item.subject}</strong>
+    <strong>{nameOf(item.member_id)}｜{item.subject}</strong> <small>｜{item.source}</small>
     <p>{item.category}・{item.priority}・{item.preferred_method}・狀態：<strong>{item.status}</strong></p>
     {item.description&&<p style={{whiteSpace:"pre-wrap"}}>{item.description}</p>}
     {item.follow_up_date&&<p>追蹤日期：{item.follow_up_date}</p>}
